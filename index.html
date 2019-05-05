@@ -1,0 +1,315 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<html>
+
+<head>
+  <title>Fip Radio Lyrics</title>
+  <style>
+    html {
+        /* prevents scrollbar appearance to shift layout, but always shows vertical scrollbar */
+      overflow-y: scroll;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 1.1rem;
+    }
+
+    .title {
+      font-size: 1.6rem;
+      margin: 6px 1px;
+    }
+
+    .channelsListElem {
+      float: left;
+      background-color: #F0F0F0;
+    }
+
+    .channelsListElem a {
+      display: block;
+      padding: 10px;
+      color: black;
+      text-decoration: none;
+    }
+
+    .channelsListElem a:focus { 
+      outline-offset: -1px;
+     }
+
+    /* prevents layout changes when text becomes bold by having a hidden bold text block there so layout is calculated with that */
+    .channelsListElem a::after {
+      display: block;
+      content: attr(title);
+      font-weight: bold;
+      height: 0;
+      overflow: hidden;
+      visibility: hidden;
+    }
+
+    .channelsListElemActive {
+      font-weight: bold;
+      background-color: #D0D0D0;
+    }
+
+    .channelsListElem a:hover {
+      background-color: #E0E0E0;
+    }
+
+    .songInfo {
+      font-size: 1.3rem;
+    }
+
+    .lyrics {
+      margin: 10px 0px;
+      line-height: 1.3; 
+      font-size: 1.1rem;
+    }
+
+    .sourceLink {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin: 28px 0px;
+    }
+  </style>
+
+  <script src="queryLyrics.js"></script>
+  <script>
+      // consts, global data and services
+      const baseUrl = 'http://panther.dynu.net/fip/livemeta/'
+      const channels =
+        [
+          { name: 'main fip', id: 7 },
+          { name: 'électro', id: 74 },
+          { name: 'rock', id: 64 },
+          { name: 'jazz', id: 65 },
+          { name: 'groove', id: 66 },
+          { name: 'monde', id: 69 },
+          { name: 'tout nouveau, tout fip', id: 70 },
+          { name: 'reggae', id: 71 },
+        ]
+  
+      const autoUpdateIntervalInMs = 10000
+      let lyricsService = new LyricsService()
+  
+      // state
+      var msg = ''
+      var currentlyPlayingInfo = null
+      var activeChannel = null
+  
+      // entry/init call
+      document.addEventListener("DOMContentLoaded", main);
+  
+      // types
+      function CurrentlyPlayingInfo(artist, song) {
+        this.artist = artist;
+        this.song = song;
+        this.isValid = !isNullOrEmpty(artist) && !isNullOrEmpty(song)
+        this.lyricsResult = null;
+      }
+  
+      // functions
+      function main() {
+        createChannelsLinks()
+        activeChannel = getActiveChannelFromUrl()
+        if (activeChannel)
+          updateChannelsUi()
+        
+        update()
+  
+        // could be improved to not check in fixed intervals, but just before the song ends (since the song start/end times are returned from fip meta data)
+        setInterval(() => update(), autoUpdateIntervalInMs)
+      }
+  
+      function getActiveChannelFromUrl() {
+        // channelId comes after an hash, for example id 64 is extracted from this url www.url.com/foo#64
+        let channelId = location.hash.substr(1)
+        if (channelId) {
+          let found = channels.find(c => c.id == channelId)
+          if (found)
+            return found
+        }
+        return null
+      }
+  
+      function createChannelsLinks() {
+        let channelsContainer = document.getElementById('channels')
+        channels.forEach(c => {
+          let listElem = document.createElement('div')
+          listElem.setAttribute('id', getChannelElemId(c.id))
+          listElem.classList.add('channelsListElem')
+          let link = document.createElement('a')
+          link.href = '#' + c.id
+          link.title = c.name
+          link.onclick = () => setActiveChannel(c)
+          link.innerText = c.name
+          listElem.appendChild(link)
+          channelsContainer.appendChild(listElem)
+        });
+      }
+  
+      function getChannelElemId(channelId) {
+        return 'channelElem' + channelId
+      }
+  
+      function setActiveChannel(c) {
+        if (activeChannel != null && activeChannel.id == c.id) return
+  
+        console.log('setActiveChannel: ' + c.id + ', ' + c.name)
+        activeChannel = c
+        updateChannelsUi()
+        update()
+      }
+  
+      // sets style for active channel elem 
+      function updateChannelsUi() {
+        let channelsList = document.getElementById('channels')
+  
+        // clear all selected
+        for (i = 0; i < channelsList.children.length; i++) {
+          if (channelsList.children[i].classList.contains('channelsListElemActive'))
+            channelsList.children[i].classList.remove('channelsListElemActive')
+        }
+  
+        // set active selected
+        let activeChannelElem = document.getElementById(getChannelElemId(activeChannel.id))
+        if (!activeChannelElem.classList.contains('channelsListElemActive'))
+          activeChannelElem.classList.add('channelsListElemActive')
+      }
+  
+      async function update() {
+        try {
+          if (!activeChannel) {
+            msg = "Please select a channel!"
+            return
+          }
+  
+          console.log('update ' + activeChannel.id)
+          msg = ''
+  
+          // fetch song
+          let previousPlayingInfo = currentlyPlayingInfo
+          let freshCurrentlyPlayingInfo = await fetchCurrentlyPlaying()
+  
+          let hasSongChanged = !previousPlayingInfo || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
+          if (hasSongChanged) {
+            currentlyPlayingInfo = freshCurrentlyPlayingInfo
+            updateUi() // update ui before async lyrics query
+          }
+  
+          // fetch lyrics
+          if (currentlyPlayingInfo && currentlyPlayingInfo.isValid) {
+            let lyricsRequestForPreviousSongWasOk = () => (previousPlayingInfo && previousPlayingInfo.lyricsResult)
+            if (hasSongChanged || !lyricsRequestForPreviousSongWasOk()) {
+              currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
+            }
+          } else {
+            msg = "could not find what's on"
+          }
+        }
+        catch (err) {
+          console.log(err.message)
+          msg = 'error: ' + err.message
+        }
+        finally {
+          updateUi()
+        }
+      };
+  
+      async function fetchCurrentlyPlaying() {
+        if (!activeChannel)
+          return Promise.reject(new Error('no channel active'))
+  
+        let url = baseUrl + activeChannel.id
+        let response = await fetch(url)
+        let json = await response.json()
+        return findCurrentlyPlaying(json)
+      }
+  
+      function updateUi() {
+        updateSongInfoUi(currentlyPlayingInfo)
+        updateLyricsUi()
+        updateMsgUi()
+      }
+  
+      function findCurrentlyPlaying(json) {
+        let currentUnixTime = Math.floor(new Date().getTime() / 1000.0) // TODO check timezone issues
+        let stepKeys = json.levels[0].items
+        for (i = 0; i < stepKeys.length; i++) {
+          let key = stepKeys[i]
+          let e = json.steps[key]
+          if (currentUnixTime >= e.start && currentUnixTime < e.end)
+            return new CurrentlyPlayingInfo(e.authors, e.title)
+        }
+        return null; // key not found
+      }
+  
+      function updateMsgUi() {
+        document.getElementById('msg').innerText = msg
+      }
+  
+      function updateLyricsUi() {
+        document.getElementById('lyrics').innerText = determineLyricsUiText()
+  
+        let srcLink = document.getElementById('lyricsSourceLink')
+        if (currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && !isNullOrEmpty(currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink)) {
+          srcLink.style.display = 'block'
+          srcLink.href = currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink
+        }
+        else {
+          srcLink.style.display = 'none'
+          document.getElementById('lyricsSourceLink').href = ''
+        }
+      }
+  
+      function determineLyricsUiText() {
+        if (!activeChannel || !currentlyPlayingInfo)
+          return ''
+  
+        let areLyricsAvailable = currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
+        if (areLyricsAvailable)
+          return currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
+        else
+          return 'sorry, no lyrics available'
+      }
+  
+      function updateSongInfoUi(currentlyPlayingInfo) {
+        if (!currentlyPlayingInfo) return
+  
+        let { artist, song } = currentlyPlayingInfo
+        let elem = document.getElementById('songInfo')
+        if (currentlyPlayingInfo.isValid) {
+          elem.innerHTML = artist + '</br>' + song
+        }
+        else {
+          elem.innerHTML = ''
+        }
+      }
+  
+    </script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="title">Fip Radio Lyrics</div>
+    <nav id="channels" class="channels"></nav>
+
+    <div>
+      <div style="clear:both; padding: 12px 0px;">
+        <div id="songDetails">
+          <div id="songInfo" class="songInfo"></div>
+          <div id="lyrics" class="lyrics"></div>
+          <a id="lyricsSourceLink" style="display:none;" class="sourceLink">source: chartlyrics.com</a>
+        </div>
+
+        <div id="msg"></div>
+      </div>
+    </div>
+  </div>
+
+</body>
+
+</html>
