@@ -15,7 +15,7 @@ function LyricsNotFoundResult(error) {
 }
 
 class LyricsService {
-  
+
   lyricsApiUrl() {
     return 'http://panther.dynu.net/lyrics/cl' // not a field of Lyricsservice class yet, because Firefox doesn't support class fields yet
   }
@@ -74,7 +74,7 @@ class LyricsService {
       catch (err) { console.log('error parsing LyricUrl') }
 
       let coverArtUrl = ''
-      try { coverArtUrl = this.getXmlValue('LyricCovertArtUrl') }
+      try { coverArtUrl = this.getXmlValue(xmlDoc, 'LyricCovertArtUrl') }
       catch (err) { console.log('error getting cover art url', err) }
 
       return new LyricsFoundResult({ lyrics: lyrics, coverArtUrl: coverArtUrl, lyricsSourceLink: lyricsSourceLink })
