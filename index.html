@@ -107,7 +107,7 @@
       function CurrentlyPlayingInfo(artist, song) {
         this.artist = artist;
         this.song = song;
-        this.isValid = !isNullOrEmpty(artist) && !isNullOrEmpty(song)
+        this.isValid = artist && song
         this.lyricsResult = null;
       }
   
@@ -255,7 +255,7 @@
         document.getElementById('lyrics').innerText = determineLyricsUiText()
   
         let srcLink = document.getElementById('lyricsSourceLink')
-        if (currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && !isNullOrEmpty(currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink)) {
+        if (currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink) {
           srcLink.style.display = 'block'
           srcLink.href = currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink
         }

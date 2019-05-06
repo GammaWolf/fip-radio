@@ -15,14 +15,14 @@ function LyricsNotFoundResult(error) {
 }
 
 class LyricsService {
-
+  
   lyricsApiUrl() {
     return 'http://panther.dynu.net/lyrics/cl' // not a field of Lyricsservice class yet, because Firefox doesn't support class fields yet
   }
 
   queryLyrics(artist, song) {
     return this.makeLyricsRequest(artist, song)
-      .then(xml => this.parseLyricsXmlResponse(xml))
+      .then(xml => this.parseLyricsXmlResponse(xml, artist, song))
   }
 
   makeLyricsRequest(artist, song) {
@@ -43,24 +43,38 @@ class LyricsService {
       })
   }
 
-  parseLyricsXmlResponse(xml) {
+  parseLyricsXmlResponse(xml, requestedArtist, requestedSong) {
     let parser = new DOMParser();
     let xmlDoc = parser.parseFromString(xml, "text/xml");
     try {
-      let lyricsElem = xmlDoc.getElementsByTagName("Lyric")[0].childNodes[0]
-      if (!lyricsElem)
-        return new LyricsNotFoundResult("lyrics empty")
+      // extract lyrics
+      let lyrics = ''
+      try { lyrics = this.getXmlValue(xmlDoc, "Lyric") }
+      catch (err) { return LyricsNotFoundResult("lyrics not found") }
 
-      let lyrics = lyricsElem.nodeValue
-      if (isNullOrEmpty(lyrics))
-        return new LyricsNotFoundResult("lyrics empty")
+      // ensure artist returned from lyrics search is the same as the requested
+      let artist = ''
+      try { artist = this.getXmlValue(xmlDoc, 'LyricArtist')}
+      catch (err) { console.log('error getting artist')}
+      if (artist && !this.oneIncludesTheOtherCaseInsensitive(artist, requestedArtist)) {
+        return new LyricsNotFoundResult('artist expected: ' + requestedArtist + ', but was: ' + artist)
+      }
+      
+      // ensure song returned from lyrics search is the same as the requested
+      let song = ''
+      try { song = this.getXmlValue(xmlDoc, 'LyricSong') }
+      catch (err) { } // ignore
+      if (song && !this.oneIncludesTheOtherCaseInsensitive(song, requestedSong)) {
+        return new LyricsNotFoundResult('song expected: ' + requestedSong + ', but was: ' + song)
+      }
 
+      // extract misc info
       let lyricsSourceLink = '';
       try { lyricsSourceLink = this.getXmlValue(xmlDoc, 'LyricUrl') }
       catch (err) { console.log('error parsing LyricUrl') }
 
       let coverArtUrl = ''
-      try { coverArtUrl = xmlDoc.getElementsByTagName("LyricCovertArtUrl")[0].childNodes[0].nodeValue }
+      try { coverArtUrl = this.getXmlValue('LyricCovertArtUrl') }
       catch (err) { console.log('error getting cover art url', err) }
 
       return new LyricsFoundResult({ lyrics: lyrics, coverArtUrl: coverArtUrl, lyricsSourceLink: lyricsSourceLink })
@@ -71,6 +85,13 @@ class LyricsService {
     }
   }
 
+  oneIncludesTheOtherCaseInsensitive(a, b) {
+    if (!a || !b) return false;
+    let la = a.toLocaleLowerCase()
+    let lb = b.toLocaleLowerCase()
+    return la.includes(lb) || lb.includes(la)
+  }
+
   getXmlValue(xmlDoc, tagName) {
     return xmlDoc.getElementsByTagName(tagName)[0].childNodes[0].nodeValue
   }
@@ -79,8 +100,4 @@ class LyricsService {
     return { url: response.url, status: response.status, statusText: response.statusText }
   }
 
-}
-
-function isNullOrEmpty(str) {
-  return str == null || str === ''
 }
