@@ -17,8 +17,7 @@ function LyricsNotFoundResult(error) {
 class LyricsService {
 
   lyricsApiUrl() {
-    // not a field of Lyricsservice class yet, because Firefox doesn't support class fields yet
-    return 'http://panther.dynu.net/lyrics/cl' 
+    return 'http://panther.dynu.net/lyrics/cl' // not a field of Lyricsservice class yet, because Firefox doesn't support class fields yet
   }
 
   queryLyrics(artist, song) {
@@ -51,7 +50,7 @@ class LyricsService {
       // extract lyrics
       let lyrics = ''
       try { lyrics = this.getXmlValue(xmlDoc, "Lyric") }
-      catch (err) { return LyricsNotFoundResult("lyrics not found") }
+      catch (err) { return new LyricsNotFoundResult("lyrics not found") }
 
       // ensure artist returned from lyrics search is the same as the requested
       let artist = ''
