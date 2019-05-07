@@ -17,7 +17,8 @@ function LyricsNotFoundResult(error) {
 class LyricsService {
 
   lyricsApiUrl() {
-    return 'http://panther.dynu.net/lyrics/cl' // not a field of Lyricsservice class yet, because Firefox doesn't support class fields yet
+    // not a field of Lyricsservice class yet, because Firefox doesn't support class fields yet
+    return 'http://panther.dynu.net/lyrics/cl' 
   }
 
   queryLyrics(artist, song) {
@@ -56,7 +57,7 @@ class LyricsService {
       let artist = ''
       try { artist = this.getXmlValue(xmlDoc, 'LyricArtist')}
       catch (err) { console.log('error getting artist')}
-      if (artist && !this.oneIncludesTheOtherCaseInsensitive(artist, requestedArtist)) {
+      if (artist && !this.isSimilar(artist, requestedArtist)) {
         return new LyricsNotFoundResult('artist expected: ' + requestedArtist + ', but was: ' + artist)
       }
       
@@ -64,7 +65,7 @@ class LyricsService {
       let song = ''
       try { song = this.getXmlValue(xmlDoc, 'LyricSong') }
       catch (err) { } // ignore
-      if (song && !this.oneIncludesTheOtherCaseInsensitive(song, requestedSong)) {
+      if (song && !this.isSimilar(song, requestedSong)) {
         return new LyricsNotFoundResult('song expected: ' + requestedSong + ', but was: ' + song)
       }
 
@@ -85,10 +86,15 @@ class LyricsService {
     }
   }
 
-  oneIncludesTheOtherCaseInsensitive(a, b) {
+  isSimilar(a,b) {
     if (!a || !b) return false;
-    let la = a.toLocaleLowerCase()
-    let lb = b.toLocaleLowerCase()
+
+    // remove special chars, because those
+    // \W Matches any alphanumeric character from the basic Latin alphabet, including the underscore. Equivalent to [A-Za-z0-9_]
+    // gi: global, case insensitive
+    let rex = /\W/gi
+    let la = a.toLocaleLowerCase().replace(rex, '')
+    let lb = b.toLocaleLowerCase().replace(rex, '')
     return la.includes(lb) || lb.includes(la)
   }
 
