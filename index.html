@@ -194,20 +194,22 @@
           // fetch song
           let previousPlayingInfo = currentlyPlayingInfo
           let freshCurrentlyPlayingInfo = await fetchCurrentlyPlaying()
-  
-          let hasSongChanged = !previousPlayingInfo || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
-          if (hasSongChanged) {
-            currentlyPlayingInfo = freshCurrentlyPlayingInfo
-            updateUi() // update ui before async lyrics query
-          }
-  
-          // fetch lyrics
-          if (currentlyPlayingInfo && currentlyPlayingInfo.isValid) {
-            let lyricsRequestForPreviousSongWasOk = () => (previousPlayingInfo && previousPlayingInfo.lyricsResult)
-            if (hasSongChanged || !lyricsRequestForPreviousSongWasOk()) {
-              currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
+          if (freshCurrentlyPlayingInfo) {
+            let hasSongChanged = !previousPlayingInfo || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
+            if (hasSongChanged) {
+              currentlyPlayingInfo = freshCurrentlyPlayingInfo
+              updateUi() // update ui before async lyrics query
+              
+              // fetch lyrics
+              if (currentlyPlayingInfo.isValid) {
+                let lyricsRequestForPreviousSongWasOk = () => (previousPlayingInfo && previousPlayingInfo.lyricsResult)
+                if (hasSongChanged || !lyricsRequestForPreviousSongWasOk()) {
+                  currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
+                }
+              }
             }
           } else {
+            currentlyPlayingInfo = null
             msg = "could not find what's on"
           }
         }
@@ -277,12 +279,10 @@
           return 'sorry, no lyrics available'
       }
   
-      function updateSongInfoUi(currentlyPlayingInfo) {
-        if (!currentlyPlayingInfo) return
-  
-        let { artist, song } = currentlyPlayingInfo
+      function updateSongInfoUi(currentlyPlayingInfo) {  
         let elem = document.getElementById('songInfo')
-        if (currentlyPlayingInfo.isValid) {
+        if (currentlyPlayingInfo && currentlyPlayingInfo.isValid) {
+          let { artist, song } = currentlyPlayingInfo
           elem.innerHTML = artist + '</br>' + song
         }
         else {
