@@ -241,8 +241,8 @@
   
       function updateUi() {
         updateSongInfoUi(currentlyPlayingInfo)
-        updateLyricsUi()
-        updateMsgUi()
+        updateLyricsUi(currentlyPlayingInfo, activeChannel)
+        updateMsgUi(msg)
       }
   
       function findCurrentlyPlaying(json) {
@@ -257,12 +257,18 @@
         return null; // key not found
       }
   
-      function updateMsgUi() {
-        document.getElementById('msg').innerText = msg
+      function updateMsgUi(mag) {
+        let msgElem = document.getElementById('msg')
+        if (msg != msgElem.innerText)
+          msgElem.innerText = msg
       }
   
-      function updateLyricsUi() {
-        document.getElementById('lyrics').innerText = determineLyricsUiText()
+      function updateLyricsUi(currentlyPlayingInfo, activeChannel) {
+        let lyricsUiText = determineLyricsUiText(currentlyPlayingInfo, activeChannel)
+        let lyricsElem = document.getElementById('lyrics')
+        if (lyricsUiText != lyricsElem.innerText) {
+          lyricsElem.innerText = lyricsUiText
+        }
   
         let srcLink = document.getElementById('lyricsSourceLink')
         if (currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink) {
@@ -275,7 +281,7 @@
         }
       }
   
-      function determineLyricsUiText() {
+      function determineLyricsUiText(currentlyPlayingInfo, activeChannel) {
         if (!activeChannel || !currentlyPlayingInfo)
           return ''
   
@@ -290,7 +296,9 @@
         let elem = document.getElementById('songInfo')
         if (currentlyPlayingInfo && currentlyPlayingInfo.isValid) {
           let { artist, song } = currentlyPlayingInfo
-          elem.innerHTML = artist + '</br>' + song
+          let newHtml = artist + '</br>' + song
+          if (newHtml != elem.innerHTML)
+            elem.innerHTML = artist + '</br>' + song
         }
         else {
           elem.innerHTML = ''
