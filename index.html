@@ -77,7 +77,7 @@
     }
   </style>
 
-  <script src="queryLyrics.js"></script>
+  <script async src="queryLyrics.js"></script>
   <script>
       // consts, global data and services
       const baseUrl = 'http://panther.dynu.net/fip/livemeta/'
@@ -94,15 +94,16 @@
         ]
   
       const autoUpdateIntervalInMs = 10000
-      let lyricsService = new LyricsService()
   
       // state
       var msg = ''
       var currentlyPlayingInfo = null
       var activeChannel = null
+      var lyricsService = null
   
       // entry/init call
-      document.addEventListener("DOMContentLoaded", main);
+      document.addEventListener("DOMContentLoaded", onDOMContentLoaded)
+      window.onload = onWindowLoad
   
       // types
       function CurrentlyPlayingInfo(artist, song) {
@@ -111,10 +112,16 @@
         this.isValid = artist && song
         this.lyricsResult = null;
       }
-  
+
       // functions
-      function main() {
+      function onDOMContentLoaded() {
         createChannelsLinks()
+      }
+  
+      function onWindowLoad() {
+        console.log('onLoad')
+        lyricsService = new LyricsService()
+
         activeChannel = getActiveChannelFromUrl()
         if (activeChannel)
           updateChannelsUi()
