@@ -244,15 +244,19 @@
         updateLyricsUi(currentlyPlayingInfo, activeChannel)
         updateMsgUi(msg)
       }
-  
+
       function findCurrentlyPlaying(json) {
-        let currentUnixTime = Math.floor(new Date().getTime() / 1000.0) // TODO check timezone issues
-        let stepKeys = json.levels[0].items
-        for (i = 0; i < stepKeys.length; i++) {
-          let key = stepKeys[i]
-          let e = json.steps[key]
-          if (currentUnixTime >= e.start && currentUnixTime < e.end)
+        try {
+          let stepKeys = json.levels[0].items
+          let pos = json.levels[0].position
+          if (pos && pos >= 0 && pos < stepKeys.length) {
+            let key = stepKeys[pos]
+            let e = json.steps[key]
             return new CurrentlyPlayingInfo(e.authors, e.title)
+          }
+        } 
+        catch (err) {
+          console.log('err getting currently playing', err)
         }
         return null; // key not found
       }
