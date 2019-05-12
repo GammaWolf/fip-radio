@@ -126,6 +126,20 @@
       // functions
       function onDOMContentLoaded() {
         createChannelsLinks()
+
+        // set max width of outer container, so when the text (of author, title or lyrics) gets too long, it doesn't mess up the layout)
+        let outer = document.getElementById('outerContainer')
+        outer.style.maxWidth = (calculateChannelsMenuWidth() + 0.5) + 'px' // 0.5 is needed, otherwise it will wrap the last menu item to the next line
+      }
+
+      function calculateChannelsMenuWidth() {
+        // sum up menu part widths to get whole menu width 
+        let channelsMenuWidth = 0.0
+        let channelsList = document.getElementById('channels')
+        for (i = 0; i < channelsList.children.length; i++) {
+          channelsMenuWidth += channelsList.children[i].scrollWidth
+        }
+        return channelsMenuWidth
       }
   
       function onWindowLoad() {
@@ -347,23 +361,21 @@
 </head>
 
 <body>
-  <div class="container">
+  <div id="outerContainer">
     <div class="titleLineContainer">
       <div class="title" >Fip Radio Lyrics</div>
       <audio id="player" class="player" controls autoplay src="https://direct.fipradio.fr/live/fip-webradio1.mp3"></audio>
     </div>
     <nav id="channels" class="channels"></nav>
 
-    <div>
-      <div style="clear:both; padding: 12px 0px;">
-        <div id="songDetails">
-          <div id="songInfo" class="songInfo"></div>
-          <div id="lyrics" class="lyrics"></div>
-          <a id="lyricsSourceLink" style="display:none;" class="sourceLink">source: chartlyrics.com</a>
-        </div>
-
-        <div id="msg"></div>
+    <div style="clear:both; padding: 12px 0px;">
+      <div id="songDetails">
+        <div id="songInfo" class="songInfo"></div>
+        <div id="lyrics" class="lyrics"></div>
+        <a id="lyricsSourceLink" style="display:none;" class="sourceLink">source: chartlyrics.com</a>
       </div>
+
+      <div id="msg"></div>
     </div>
   </div>
 
