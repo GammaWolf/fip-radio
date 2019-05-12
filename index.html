@@ -46,6 +46,7 @@
       padding: 10px;
       color: black;
       text-decoration: none;
+      text-align: center;
     }
 
     .channelsListElem a:focus { 
@@ -90,7 +91,7 @@
 
   <script async src="queryLyrics.js"></script>
   <script>
-      // consts, global data and services
+      // consts, global data
       const baseUrl = 'http://panther.dynu.net/fip/livemeta/'
       const channels =
         [
@@ -147,7 +148,7 @@
         console.log('onLoad')
         lyricsService = new LyricsService()
 
-        let c = getActiveChannelFromUrl()
+        let c = getActiveChannelFromUrl() 
         if (!c)
           c = channels[0] // default to main channel
         
