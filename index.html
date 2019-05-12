@@ -35,6 +35,11 @@
       margin: 4px 0px;
       max-height: 30px;
     }
+    
+    .channels {
+      background: linear-gradient(to bottom, transparent 6%, rgba(0,0,0,0.05) 6%,transparent 100%);
+      display: inline-block;
+    }
 
     /* seperator for the right side */
     .channelSeperator, .channelSeperator a:hover  {
@@ -55,7 +60,6 @@
 
     .channelsListElem {
       float: left; /* horizontal menu */
-      background-color: #F0F0F0;
     }
 
     .channelsListElem a {
@@ -82,11 +86,12 @@
 
     .channelsListElemActive {
       font-weight: bold;
-      background-color: #D0D0D0;
+      text-decoration: underline;
+      text-decoration-style: double;
     }
 
     .channelsListElem a:hover {
-      background-color: #E0E0E0;
+      text-decoration: underline;
     }
 
     .songInfo {
