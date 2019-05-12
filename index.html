@@ -148,11 +148,11 @@
         lyricsService = new LyricsService()
 
         let c = getActiveChannelFromUrl()
-        if (c)
-          setActiveChannel(c)
-        else
-          update()
-  
+        if (!c)
+          c = channels[0] // default to main channel
+        
+        setActiveChannel(c)
+
         // could be improved to not check in fixed intervals, but just before the song ends (since the song start/end times are returned from fip meta data)
         setInterval(() => update(), autoUpdateIntervalInMs)
       }
