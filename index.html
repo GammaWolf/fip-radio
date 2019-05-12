@@ -36,10 +36,26 @@
       max-height: 30px;
     }
 
+    /* seperator for the right side */
+    .channelSeperator, .channelSeperator a:hover  {
+      background-image: linear-gradient(transparent, #666, transparent);
+      background-position: right 55%;
+      background-repeat: no-repeat;
+      background-size: 1px 65%;
+    }
+
+     /* seperator for left and right side for the first seperator */
+    .channels div:first-child, .channels div:first-child a:hover {
+      background-image: linear-gradient(transparent, #666, transparent), 
+                        linear-gradient(transparent, #666, transparent);
+      background-position: left 55%, right 55%;
+      background-repeat: no-repeat;
+      background-size: 1px 65%;
+    }
+
     .channelsListElem {
       float: left; /* horizontal menu */
       background-color: #F0F0F0;
-      outline: 1px solid #D0D0D0;
     }
 
     .channelsListElem a {
@@ -176,6 +192,7 @@
           let listElem = document.createElement('div')
           listElem.setAttribute('id', getChannelElemId(c.id))
           listElem.classList.add('channelsListElem')
+          listElem.classList.add('channelSeperator')
           let link = document.createElement('a')
           link.href = '#' + c.id
           link.title = c.name
@@ -183,7 +200,7 @@
           link.innerText = c.name
           listElem.appendChild(link)
           channelsContainer.appendChild(listElem)
-        });
+        })
       }
   
       function getChannelElemId(channelId) {
