@@ -260,8 +260,17 @@
   
         let url = baseUrl + activeChannel.id
         let response = await fetch(url)
-        let json = await response.json()
-        return findCurrentlyPlaying(json)
+        let json = null
+        try {
+          json = await response.json()
+        }
+        catch (err) {
+          console.log('err converting response to json', err)
+        }
+        if (json)
+          return findCurrentlyPlaying(json)
+        else
+          return null
       }
   
       function updateUi() {
