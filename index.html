@@ -114,7 +114,8 @@
   <script async src="queryLyrics.js"></script>
   <script>
       // consts, global data
-      const baseUrl = 'http://panther.dynu.net/fip/livemeta/'
+      var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
+      const baseUrl = protocol + '//panther.dynu.net/fip/livemeta/'
       const channels =
         [
           { name: 'main fip', id: 7, listenUrl: 'https://direct.fipradio.fr/live/fip-midfi.mp3?' },
