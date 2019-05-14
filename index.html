@@ -1,7 +1,7 @@
 <!doctype html>
 
 <html lang="en">
-  
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +10,7 @@
   <title>Fip Radio Lyrics</title>
   <style>
     html {
-        /* prevents scrollbar appearance to shift layout, but always shows vertical scrollbar */
+      /* prevents scrollbar appearance to shift layout, but always shows vertical scrollbar */
       overflow-y: scroll;
     }
 
@@ -23,8 +23,8 @@
     }
 
     .titleLineContainer {
-      display:flex; 
-      justify-content: space-between; 
+      display: flex;
+      justify-content: space-between;
       align-items: flex-end;
       flex-wrap: wrap;
     }
@@ -38,31 +38,34 @@
       margin: 4px 0px;
       max-height: 30px;
     }
-    
+
     .channels {
-      background: linear-gradient(to bottom, transparent 6%, rgba(0,0,0,0.05) 6%,transparent 100%);
+      background: linear-gradient(to bottom, transparent 6%, rgba(0, 0, 0, 0.05) 6%, transparent 100%);
       display: inline-block;
     }
 
     /* seperator for the right side */
-    .channelSeperator, .channelSeperator a:hover  {
+    .channelSeperator,
+    .channelSeperator a:hover {
       background-image: linear-gradient(transparent, #666, transparent);
       background-position: left 55%;
       background-repeat: no-repeat;
       background-size: 1px 65%;
     }
 
-     /* seperator for left and right side for the last seperator */
-    .channels div:last-child, .channels div:last-child a:hover {
-      background-image: linear-gradient(transparent, #666, transparent), 
-                        linear-gradient(transparent, #666, transparent);
+    /* seperator for left and right side for the last seperator */
+    .channels div:last-child,
+    .channels div:last-child a:hover {
+      background-image: linear-gradient(transparent, #666, transparent),
+        linear-gradient(transparent, #666, transparent);
       background-position: left 55%, right 55%;
       background-repeat: no-repeat;
       background-size: 1px 65%;
     }
 
     .channelsListElem {
-      float: left; /* horizontal menu */
+      /* horizontal menu */
+      float: left;
     }
 
     .channelsListElem a {
@@ -73,9 +76,9 @@
       text-align: center;
     }
 
-    .channelsListElem a:focus { 
+    .channelsListElem a:focus {
       outline-offset: -1px;
-     }
+    }
 
     /* prevents layout changes when text becomes bold by having a hidden bold text block there so layout is calculated with that */
     .channelsListElem a::after {
@@ -103,7 +106,7 @@
 
     .lyrics {
       margin: 10px 0px;
-      line-height: 1.3; 
+      line-height: 1.3;
       font-size: 1.2rem;
     }
 
@@ -116,279 +119,279 @@
 
   <script async src="queryLyrics.js"></script>
   <script>
-      // consts, global data
-      var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
-      const baseUrl = protocol + '//www.panther.dynu.net/fip/livemeta/'
-      const channels =
-        [
-          { name: 'main fip', id: 7, listenUrl: 'https://direct.fipradio.fr/live/fip-midfi.mp3?' },
-          { name: 'électro', id: 74, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio8.mp3' },
-          { name: 'rock', id: 64, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio1.mp3'},
-          { name: 'jazz', id: 65, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio2.mp3' },
-          { name: 'groove', id: 66, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio3.mp3' },
-          { name: 'monde', id: 69, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio4.mp3'},
-          { name: 'tout nouveau', id: 70, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio5.mp3' },
-          { name: 'reggae', id: 71, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio6.mp3' },
-        ]
-      const autoUpdateIntervalInMs = 10000
-  
-      // state
-      var msg = ''
-      var currentlyPlayingInfo = null
-      var activeChannel = null
-      var lyricsService = null
-  
-      // entry/init call
-      document.addEventListener("DOMContentLoaded", onDOMContentLoaded)
-      window.onload = onWindowLoad
-  
-      // types
-      function CurrentlyPlayingInfo(artist, song) {
-        this.artist = artist;
-        this.song = song;
-        this.isValid = artist && song
-        this.lyricsResult = null;
+    // consts, global data
+    var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
+    const baseUrl = protocol + '//www.panther.dynu.net/fip/livemeta/'
+    const channels =
+      [
+        { name: 'main fip', id: 7, listenUrl: 'https://direct.fipradio.fr/live/fip-midfi.mp3?' },
+        { name: 'électro', id: 74, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio8.mp3' },
+        { name: 'rock', id: 64, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio1.mp3' },
+        { name: 'jazz', id: 65, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio2.mp3' },
+        { name: 'groove', id: 66, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio3.mp3' },
+        { name: 'monde', id: 69, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio4.mp3' },
+        { name: 'tout nouveau', id: 70, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio5.mp3' },
+        { name: 'reggae', id: 71, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio6.mp3' },
+      ]
+    const autoUpdateIntervalInMs = 10000
+
+    // state
+    var msg = ''
+    var currentlyPlayingInfo = null
+    var activeChannel = null
+    var lyricsService = null
+
+    // entry/init call
+    document.addEventListener("DOMContentLoaded", onDOMContentLoaded)
+    window.onload = onWindowLoad
+
+    // types
+    function CurrentlyPlayingInfo(artist, song) {
+      this.artist = artist;
+      this.song = song;
+      this.isValid = artist && song
+      this.lyricsResult = null;
+    }
+
+    // functions
+    function onDOMContentLoaded() {
+      createChannelsLinks()
+
+      // set max width of outer container, so when the text (of author, title or lyrics) gets too long, it doesn't mess up the layout)
+      let s = document.querySelectorAll(".channelsMaxWidth")
+      let maxWidth = calculateChannelsMenuWidth().toFixed(2) + 'px'
+      s.forEach(e => {
+        e.style.maxWidth = maxWidth
+      });
+    }
+
+    function calculateChannelsMenuWidth() {
+      // sum up menu part widths to get whole menu width 
+      let channelsMenuWidth = 0.0
+      let channelsList = document.getElementById('channels')
+      for (i = 0; i < channelsList.children.length; i++) {
+        channelsMenuWidth += channelsList.children[i].getBoundingClientRect().width
+      }
+      return channelsMenuWidth
+    }
+
+    function onWindowLoad() {
+      console.log('onLoad')
+      lyricsService = new LyricsService()
+
+      let c = getActiveChannelFromUrl()
+      if (!c)
+        c = channels[0] // default to main channel
+
+      setActiveChannel(c)
+
+      // could be improved to not check in fixed intervals, but just before the song ends (since the song start/end times are returned from fip meta data)
+      setInterval(() => update(), autoUpdateIntervalInMs)
+    }
+
+    function getActiveChannelFromUrl() {
+      // channelId comes after an hash, for example id 64 is extracted from this url www.url.com/foo#64
+      let channelId = location.hash.substr(1)
+      if (channelId) {
+        let found = channels.find(c => c.id == channelId)
+        if (found)
+          return found
+      }
+      return null
+    }
+
+    function createChannelsLinks() {
+      let channelsContainer = document.getElementById('channels')
+      channels.forEach(c => {
+        let listElem = document.createElement('div')
+        listElem.setAttribute('id', getChannelElemId(c.id))
+        listElem.classList.add('channelsListElem')
+        listElem.classList.add('channelSeperator')
+        let link = document.createElement('a')
+        link.href = '#' + c.id
+        link.title = c.name
+        link.onclick = () => setActiveChannel(c)
+        link.innerText = c.name
+        listElem.appendChild(link)
+        channelsContainer.appendChild(listElem)
+      })
+    }
+
+    function getChannelElemId(channelId) {
+      return 'channelElem' + channelId
+    }
+
+    function setActiveChannel(c) {
+      if (activeChannel != null && activeChannel.id == c.id) return
+
+      let oldChannel = c
+      console.log('setActiveChannel: ' + c.id + ', ' + c.name)
+      activeChannel = c
+      onActiveChannelChanged(oldChannel, activeChannel)
+    }
+
+    function onActiveChannelChanged(oldChannel, newChannel) {
+      updateChannelsUi(activeChannel)
+      update()
+      updatePlayerSrcUrl(activeChannel)
+    }
+
+    function updatePlayerSrcUrl(channel) {
+      let url = ''
+      if (channel) {
+        url = channel.listenUrl
+      }
+      let player = document.getElementById('player')
+      player.setAttribute('src', url)
+    }
+
+    // sets style for active channel elem 
+    function updateChannelsUi(activeChannel) {
+      let channelsList = document.getElementById('channels')
+
+      // clear all selected
+      for (i = 0; i < channelsList.children.length; i++) {
+        if (channelsList.children[i].classList.contains('channelsListElemActive'))
+          channelsList.children[i].classList.remove('channelsListElemActive')
       }
 
-      // functions
-      function onDOMContentLoaded() {
-        createChannelsLinks()
+      // set active selected
+      let activeChannelElem = document.getElementById(getChannelElemId(activeChannel.id))
+      if (!activeChannelElem.classList.contains('channelsListElemActive'))
+        activeChannelElem.classList.add('channelsListElemActive')
+    }
 
-        // set max width of outer container, so when the text (of author, title or lyrics) gets too long, it doesn't mess up the layout)
-        let s = document.querySelectorAll(".channelsMaxWidth")
-        let maxWidth = calculateChannelsMenuWidth().toFixed(2) + 'px'
-        s.forEach(e => {
-          e.style.maxWidth = maxWidth
-        });
-      }
-
-      function calculateChannelsMenuWidth() {
-        // sum up menu part widths to get whole menu width 
-        let channelsMenuWidth = 0.0
-        let channelsList = document.getElementById('channels')
-        for (i = 0; i < channelsList.children.length; i++) {
-          channelsMenuWidth += channelsList.children[i].getBoundingClientRect().width
+    async function update() {
+      try {
+        if (!activeChannel) {
+          msg = "Please select a channel!"
+          return
         }
-        return channelsMenuWidth
-      }
-  
-      function onWindowLoad() {
-        console.log('onLoad')
-        lyricsService = new LyricsService()
 
-        let c = getActiveChannelFromUrl() 
-        if (!c)
-          c = channels[0] // default to main channel
-        
-        setActiveChannel(c)
+        console.log('update ' + activeChannel.id)
+        msg = ''
 
-        // could be improved to not check in fixed intervals, but just before the song ends (since the song start/end times are returned from fip meta data)
-        setInterval(() => update(), autoUpdateIntervalInMs)
-      }
-  
-      function getActiveChannelFromUrl() {
-        // channelId comes after an hash, for example id 64 is extracted from this url www.url.com/foo#64
-        let channelId = location.hash.substr(1)
-        if (channelId) {
-          let found = channels.find(c => c.id == channelId)
-          if (found)
-            return found
-        }
-        return null
-      }
-  
-      function createChannelsLinks() {
-        let channelsContainer = document.getElementById('channels')
-        channels.forEach(c => {
-          let listElem = document.createElement('div')
-          listElem.setAttribute('id', getChannelElemId(c.id))
-          listElem.classList.add('channelsListElem')
-          listElem.classList.add('channelSeperator')
-          let link = document.createElement('a')
-          link.href = '#' + c.id
-          link.title = c.name
-          link.onclick = () => setActiveChannel(c)
-          link.innerText = c.name
-          listElem.appendChild(link)
-          channelsContainer.appendChild(listElem)
-        })
-      }
-  
-      function getChannelElemId(channelId) {
-        return 'channelElem' + channelId
-      }
-  
-      function setActiveChannel(c) {
-        if (activeChannel != null && activeChannel.id == c.id) return
-  
-        let oldChannel = c
-        console.log('setActiveChannel: ' + c.id + ', ' + c.name)
-        activeChannel = c
-        onActiveChannelChanged(oldChannel, activeChannel)
-      }
+        // fetch song
+        let previousPlayingInfo = currentlyPlayingInfo
+        let freshCurrentlyPlayingInfo = await fetchCurrentlyPlaying()
+        if (freshCurrentlyPlayingInfo) {
+          let hasSongChanged = !previousPlayingInfo || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
+          if (hasSongChanged) {
+            currentlyPlayingInfo = freshCurrentlyPlayingInfo
+            updateUi() // update ui before async lyrics query
 
-      function onActiveChannelChanged(oldChannel, newChannel) {
-        updateChannelsUi(activeChannel)
-        update()
-        updatePlayerSrcUrl(activeChannel)
-      }
-
-      function updatePlayerSrcUrl(channel) {
-        let url = ''
-        if (channel) {
-          url = channel.listenUrl
-        }
-        let player = document.getElementById('player')
-        player.setAttribute('src', url)
-      }
-  
-      // sets style for active channel elem 
-      function updateChannelsUi(activeChannel) {
-        let channelsList = document.getElementById('channels')
-  
-        // clear all selected
-        for (i = 0; i < channelsList.children.length; i++) {
-          if (channelsList.children[i].classList.contains('channelsListElemActive'))
-            channelsList.children[i].classList.remove('channelsListElemActive')
-        }
-  
-        // set active selected
-        let activeChannelElem = document.getElementById(getChannelElemId(activeChannel.id))
-        if (!activeChannelElem.classList.contains('channelsListElemActive'))
-          activeChannelElem.classList.add('channelsListElemActive')
-      }
-  
-      async function update() {
-        try {
-          if (!activeChannel) {
-            msg = "Please select a channel!"
-            return
-          }
-  
-          console.log('update ' + activeChannel.id)
-          msg = ''
-  
-          // fetch song
-          let previousPlayingInfo = currentlyPlayingInfo
-          let freshCurrentlyPlayingInfo = await fetchCurrentlyPlaying()
-          if (freshCurrentlyPlayingInfo) {
-            let hasSongChanged = !previousPlayingInfo || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
-            if (hasSongChanged) {
-              currentlyPlayingInfo = freshCurrentlyPlayingInfo
-              updateUi() // update ui before async lyrics query
-              
-              // fetch lyrics
-              if (currentlyPlayingInfo.isValid) {
-                let lyricsRequestForPreviousSongWasOk = () => (previousPlayingInfo && previousPlayingInfo.lyricsResult)
-                if (hasSongChanged || !lyricsRequestForPreviousSongWasOk()) {
-                  currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
-                }
+            // fetch lyrics
+            if (currentlyPlayingInfo.isValid) {
+              let lyricsRequestForPreviousSongWasOk = () => (previousPlayingInfo && previousPlayingInfo.lyricsResult)
+              if (hasSongChanged || !lyricsRequestForPreviousSongWasOk()) {
+                currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
               }
             }
-          } else {
-            currentlyPlayingInfo = null
-            msg = "could not find what's on"
           }
+        } else {
+          currentlyPlayingInfo = null
+          msg = "could not find what's on"
         }
-        catch (err) {
-          console.log(err.message)
-          msg = 'error: ' + err.message
-        }
-        finally {
-          updateUi()
-        }
-      };
-  
-      async function fetchCurrentlyPlaying() {
-        if (!activeChannel)
-          return Promise.reject(new Error('no channel active'))
-  
-        let url = baseUrl + activeChannel.id
-        let response = await fetch(url)
-        let json = null
-        try {
-          json = await response.json()
-        }
-        catch (err) {
-          console.log('err converting response to json', err)
-        }
-        if (json)
-          return findCurrentlyPlaying(json)
-        else
-          return null
       }
-  
-      function updateUi() {
-        updateSongInfoUi(currentlyPlayingInfo)
-        updateLyricsUi(currentlyPlayingInfo, activeChannel)
-        updateMsgUi(msg)
+      catch (err) {
+        console.log(err.message)
+        msg = 'error: ' + err.message
+      }
+      finally {
+        updateUi()
+      }
+    };
+
+    async function fetchCurrentlyPlaying() {
+      if (!activeChannel)
+        return Promise.reject(new Error('no channel active'))
+
+      let url = baseUrl + activeChannel.id
+      let response = await fetch(url)
+      let json = null
+      try {
+        json = await response.json()
+      }
+      catch (err) {
+        console.log('err converting response to json', err)
+      }
+      if (json)
+        return findCurrentlyPlaying(json)
+      else
+        return null
+    }
+
+    function updateUi() {
+      updateSongInfoUi(currentlyPlayingInfo)
+      updateLyricsUi(currentlyPlayingInfo, activeChannel)
+      updateMsgUi(msg)
+    }
+
+    function findCurrentlyPlaying(json) {
+      try {
+        let stepKeys = json.levels[0].items
+        let pos = json.levels[0].position
+        if (pos && pos >= 0 && pos < stepKeys.length) {
+          let key = stepKeys[pos]
+          let e = json.steps[key]
+          return new CurrentlyPlayingInfo(e.authors, e.title)
+        }
+      }
+      catch (err) {
+        console.log('err getting currently playing', err)
+      }
+      return null; // key not found
+    }
+
+    function updateMsgUi(mag) {
+      let msgElem = document.getElementById('msg')
+      if (msg != msgElem.innerText)
+        msgElem.innerText = msg
+    }
+
+    function updateLyricsUi(currentlyPlayingInfo, activeChannel) {
+      let lyricsUiText = determineLyricsUiText(currentlyPlayingInfo, activeChannel)
+      let lyricsElem = document.getElementById('lyrics')
+      if (lyricsUiText != lyricsElem.innerText) {
+        lyricsElem.innerText = lyricsUiText
       }
 
-      function findCurrentlyPlaying(json) {
-        try {
-          let stepKeys = json.levels[0].items
-          let pos = json.levels[0].position
-          if (pos && pos >= 0 && pos < stepKeys.length) {
-            let key = stepKeys[pos]
-            let e = json.steps[key]
-            return new CurrentlyPlayingInfo(e.authors, e.title)
-          }
-        } 
-        catch (err) {
-          console.log('err getting currently playing', err)
-        }
-        return null; // key not found
+      let srcLink = document.getElementById('lyricsSourceLink')
+      if (currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink) {
+        srcLink.style.display = 'block'
+        srcLink.href = currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink
       }
-  
-      function updateMsgUi(mag) {
-        let msgElem = document.getElementById('msg')
-        if (msg != msgElem.innerText)
-          msgElem.innerText = msg
+      else {
+        srcLink.style.display = 'none'
+        document.getElementById('lyricsSourceLink').href = ''
       }
-  
-      function updateLyricsUi(currentlyPlayingInfo, activeChannel) {
-        let lyricsUiText = determineLyricsUiText(currentlyPlayingInfo, activeChannel)
-        let lyricsElem = document.getElementById('lyrics')
-        if (lyricsUiText != lyricsElem.innerText) {
-          lyricsElem.innerText = lyricsUiText
-        }
-  
-        let srcLink = document.getElementById('lyricsSourceLink')
-        if (currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink) {
-          srcLink.style.display = 'block'
-          srcLink.href = currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink
-        }
-        else {
-          srcLink.style.display = 'none'
-          document.getElementById('lyricsSourceLink').href = ''
-        }
+    }
+
+    function determineLyricsUiText(currentlyPlayingInfo, activeChannel) {
+      if (!activeChannel || !currentlyPlayingInfo)
+        return ''
+
+      let areLyricsAvailable = currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
+      if (areLyricsAvailable)
+        return currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
+      else
+        return 'sorry, no lyrics available'
+    }
+
+    function updateSongInfoUi(currentlyPlayingInfo) {
+      let elem = document.getElementById('songInfo')
+      if (currentlyPlayingInfo && currentlyPlayingInfo.isValid) {
+        let { artist, song } = currentlyPlayingInfo
+        let newHtml = artist + '</br>' + song
+        if (newHtml != elem.innerHTML)
+          elem.innerHTML = artist + '</br>' + song
       }
-  
-      function determineLyricsUiText(currentlyPlayingInfo, activeChannel) {
-        if (!activeChannel || !currentlyPlayingInfo)
-          return ''
-  
-        let areLyricsAvailable = currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
-        if (areLyricsAvailable)
-          return currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
-        else
-          return 'sorry, no lyrics available'
+      else {
+        elem.innerHTML = ''
       }
-  
-      function updateSongInfoUi(currentlyPlayingInfo) {  
-        let elem = document.getElementById('songInfo')
-        if (currentlyPlayingInfo && currentlyPlayingInfo.isValid) {
-          let { artist, song } = currentlyPlayingInfo
-          let newHtml = artist + '</br>' + song
-          if (newHtml != elem.innerHTML)
-            elem.innerHTML = artist + '</br>' + song
-        }
-        else {
-          elem.innerHTML = ''
-        }
-      }
-  
-    </script>
+    }
+
+  </script>
 </head>
 
 <body>
