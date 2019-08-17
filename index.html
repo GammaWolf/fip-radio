@@ -122,18 +122,18 @@
   <script>
     // consts, global data
     var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
-    const baseUrl = protocol + '//www.panther.dynu.net/fip/livemeta/'
+    const baseListenUrl = 'https://direct.fipradio.fr/live/'
     const channels =
       [
-        { name: 'main fip', id: 7, listenUrl: 'https://direct.fipradio.fr/live/fip-midfi.mp3' },
-        { name: 'metal', id: 77, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio7.mp3' },
-        { name: 'électro', id: 74, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio8.mp3' },
-        { name: 'rock', id: 64, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio1.mp3' },
-        { name: 'jazz', id: 65, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio2.mp3' },
-        { name: 'groove', id: 66, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio3.mp3' },
-        { name: 'monde', id: 69, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio4.mp3' },
-        { name: 'tout nouveau', id: 70, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio5.mp3' },
-        { name: 'reggae', id: 71, listenUrl: 'https://direct.fipradio.fr/live/fip-webradio6.mp3' },
+        { name: 'main fip', id: 7, listenUrl: baseListenUrl + 'fip-midfi.mp3' },
+        { name: 'metal', id: 77, listenUrl: baseListenUrl + 'fip-webradio7.mp3' },
+        { name: 'électro', id: 74, listenUrl: baseListenUrl + 'fip-webradio8.mp3' },
+        { name: 'rock', id: 64, listenUrl: baseListenUrl + 'fip-webradio1.mp3' },
+        { name: 'jazz', id: 65, listenUrl: baseListenUrl + 'fip-webradio2.mp3' },
+        { name: 'groove', id: 66, listenUrl: baseListenUrl + 'fip-webradio3.mp3' },
+        { name: 'monde', id: 69, listenUrl: baseListenUrl + 'fip-webradio4.mp3' },
+        { name: 'tout nouveau', id: 70, listenUrl: baseListenUrl + 'fip-webradio5.mp3' },
+        { name: 'reggae', id: 71, listenUrl: baseListenUrl + 'fip-webradio6.mp3' },
       ]
     const autoUpdateIntervalInMs = 10000
 
@@ -332,10 +332,7 @@
     function findCurrentlyPlaying(json) {
       try {
         let songInfo = json.data.now.song
-        let artist = ""
-        if (songInfo.interpreters.length > 0)
-          artist = songInfo.interpreters[0]
-        return new CurrentlyPlayingInfo(artist, songInfo.title)
+        return new CurrentlyPlayingInfo(songInfo.interpreters.join(', '), songInfo.title)
       }
       catch (err) {
         console.log('err getting currently playing', err)
