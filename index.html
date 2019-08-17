@@ -308,7 +308,7 @@
       if (!activeChannel)
         return Promise.reject(new Error('no channel active'))
 
-      let url = baseUrl + activeChannel.id
+      let url = "https://www.fip.fr/latest/api/graphql?operationName=Now&variables={%22stationId%22:" + activeChannel.id + ",%22previousTrackLimit%22:1}&extensions={%22persistedQuery%22:{%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22}}"
       let response = await fetch(url)
       let json = null
       try {
@@ -331,18 +331,16 @@
 
     function findCurrentlyPlaying(json) {
       try {
-        let stepKeys = json.levels[0].items
-        let pos = json.levels[0].position
-        if (pos && pos >= 0 && pos < stepKeys.length) {
-          let key = stepKeys[pos]
-          let e = json.steps[key]
-          return new CurrentlyPlayingInfo(e.authors, e.title)
-        }
+        let songInfo = json.data.now.song
+        let artist = ""
+        if (songInfo.interpreters.length > 0)
+          artist = songInfo.interpreters[0]
+        return new CurrentlyPlayingInfo(artist, songInfo.title)
       }
       catch (err) {
         console.log('err getting currently playing', err)
       }
-      return null; // key not found
+      return null; // not found
     }
 
     function updateMsgUi(mag) {
