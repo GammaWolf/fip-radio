@@ -308,7 +308,7 @@
       if (!activeChannel)
         return Promise.reject(new Error('no channel active'))
 
-      let url = "https://www.fip.fr/latest/api/graphql?operationName=Now&variables={%22stationId%22:" + activeChannel.id + ",%22previousTrackLimit%22:1}&extensions={%22persistedQuery%22:{%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22}}"
+      let url = "latest/api/graphql?operationName=Now&variables={%22stationId%22:" + activeChannel.id + ",%22previousTrackLimit%22:1}&extensions={%22persistedQuery%22:{%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22}}"
       let response = await fetch(url)
       let json = null
       try {
