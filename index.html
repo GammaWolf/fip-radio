@@ -9,6 +9,11 @@
   <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   <title>Fip Radio Lyrics</title>
   <style>
+    :root {
+      --active-channel-color: black;
+      --hover-color: black;
+    }
+
     html {
       /* prevents scrollbar appearance to shift layout, but always shows vertical scrollbar */
       overflow-y: scroll;
@@ -21,6 +26,7 @@
       font-size: 1.2rem;
       min-width: 320px;
       margin: 16px 8px 0px 8px;
+      background: #fefefe;
     }
 
     .titleLineContainer {
@@ -41,7 +47,6 @@
     }
 
     .channels {
-      background: linear-gradient(to bottom, transparent 6%, rgba(0, 0, 0, 0.05) 6%, transparent 100%);
       display: inline-block;
     }
 
@@ -67,7 +72,13 @@
     .channelsListElem {
       /* horizontal menu */
       float: left;
+
+      --elem-accent: transparent;
+      border-bottom-color: var(--elem-accent);
+      border-bottom-width: 4px;
+      border-bottom-style: solid;
     }
+
 
     .channelsListElem a {
       display: block;
@@ -91,14 +102,19 @@
       visibility: hidden;
     }
 
-    .channelsListElemActive {
-      font-weight: bold;
-      text-decoration: underline;
-      text-decoration-style: double;
+    .channelsListElem:hover {
+      border-bottom-color: var(--hover-color);
     }
 
-    .channelsListElem a:hover {
-      text-decoration: underline;
+    .channelsListElemActive {
+      font-weight: bold;
+      border-bottom-color: var(--active-channel-color);
+      border-bottom-width: 4px;
+      border-bottom-style: solid;
+    }
+
+    .channelsListElemActive a {
+      color: var(--active-channel-color);
     }
 
     .songInfo {
@@ -125,15 +141,15 @@
     const baseListenUrl = 'https://direct.fipradio.fr/live/'
     const channels =
       [
-        { name: 'main fip', id: 7, listenUrl: baseListenUrl + 'fip-midfi.mp3' },
-        { name: 'metal', id: 77, listenUrl: baseListenUrl + 'fip-webradio7.mp3' },
-        { name: 'électro', id: 74, listenUrl: baseListenUrl + 'fip-webradio8.mp3' },
-        { name: 'rock', id: 64, listenUrl: baseListenUrl + 'fip-webradio1.mp3' },
-        { name: 'jazz', id: 65, listenUrl: baseListenUrl + 'fip-webradio2.mp3' },
-        { name: 'groove', id: 66, listenUrl: baseListenUrl + 'fip-webradio3.mp3' },
-        { name: 'monde', id: 69, listenUrl: baseListenUrl + 'fip-webradio4.mp3' },
-        { name: 'tout nouveau', id: 70, listenUrl: baseListenUrl + 'fip-webradio5.mp3' },
-        { name: 'reggae', id: 71, listenUrl: baseListenUrl + 'fip-webradio6.mp3' },
+        { name: 'main fip', id: 7, listenUrl: baseListenUrl + 'fip-midfi.mp3', colorAsHsl: { h: 328, s: 100, l: 44 } },
+        { name: 'metal', id: 77, listenUrl: baseListenUrl + 'fip-webradio7.mp3', colorAsHsl: { h: 355, s: 94, l: 59 } },
+        { name: 'électro', id: 74, listenUrl: baseListenUrl + 'fip-webradio8.mp3', colorAsHsl: { h: 182, s: 76, l: 31 } },
+        { name: 'rock', id: 64, listenUrl: baseListenUrl + 'fip-webradio1.mp3', colorAsHsl: { h: 255, s: 80, l: 66 } },
+        { name: 'jazz', id: 65, listenUrl: baseListenUrl + 'fip-webradio2.mp3', colorAsHsl: { h: 35, s: 85, l: 58 } },
+        { name: 'groove', id: 66, listenUrl: baseListenUrl + 'fip-webradio3.mp3', colorAsHsl: { h: 217, s: 84, l: 57 } },
+        { name: 'monde', id: 69, listenUrl: baseListenUrl + 'fip-webradio4.mp3', colorAsHsl: { h: 114, s: 27, l: 36 } },
+        { name: 'tout nouveau', id: 70, listenUrl: baseListenUrl + 'fip-webradio5.mp3', colorAsHsl: { h: 190, s: 100, l: 50 } },
+        { name: 'reggae', id: 71, listenUrl: baseListenUrl + 'fip-webradio6.mp3', colorAsHsl: { h: 257, s: 27, l: 36 } },
       ]
     const autoUpdateIntervalInMs = 10000
 
@@ -209,14 +225,35 @@
         listElem.setAttribute('id', getChannelElemId(c.id))
         listElem.classList.add('channelsListElem')
         listElem.classList.add('channelSeperator')
+        let staleAccentColor = makeHslaCssStrFromHsla(c.colorAsHsl.h, c.colorAsHsl.s, c.colorAsHsl.l, 0.3)
+        let accentColor = makeHslCssStrFromHslColor(c.colorAsHsl)
+        listElem.style.setProperty('--elem-accent', staleAccentColor)
+
+        listElem.onmouseenter = e => {
+          document.documentElement.style.setProperty('--hover-color', accentColor);
+        };
         let link = document.createElement('a')
         link.href = '#' + c.id
         link.title = c.name
         link.onclick = () => setActiveChannel(c)
         link.innerText = c.name
+
         listElem.appendChild(link)
         channelsContainer.appendChild(listElem)
+
       })
+    }
+
+    function makeHslaCssStrFromHsla(h, s, l, a) {
+      return 'hsl(' + h + ',' + s + '%,' + l + '%,' + a + ')'
+    }
+
+    function makeHslCssStrFromHsl(h, s, l) {
+      return 'hsl(' + h + ',' + s + '%,' + l + '%)'
+    }
+
+    function makeHslCssStrFromHslColor(c) {
+      return makeHslCssStrFromHsl(c.h, c.s, c.l)
     }
 
     function getChannelElemId(channelId) {
@@ -261,6 +298,8 @@
       let activeChannelElem = document.getElementById(getChannelElemId(activeChannel.id))
       if (!activeChannelElem.classList.contains('channelsListElemActive'))
         activeChannelElem.classList.add('channelsListElemActive')
+
+      document.documentElement.style.setProperty('--active-channel-color', makeHslCssStrFromHslColor(activeChannel.colorAsHsl));
     }
 
     async function update() {
@@ -395,7 +434,7 @@
   <div id="outerContainer">
     <div class="titleLineContainer">
       <div class="title">Fip Radio Lyrics</div>
-        <audio id="player" class="player" controls autoplay></audio>
+      <audio id="player" class="player" controls autoplay></audio>
     </div>
     <nav id="channels" class="channels"></nav>
 
