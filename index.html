@@ -33,7 +33,6 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      flex-wrap: wrap;
     }
 
     .title {
@@ -51,8 +50,7 @@
     }
 
     /* seperator for the right side */
-    .channelSeperator,
-    .channelSeperator a:hover {
+    .channelSeperator {
       background-image: linear-gradient(transparent, #666, transparent);
       background-position: left 55%;
       background-repeat: no-repeat;
@@ -60,8 +58,7 @@
     }
 
     /* seperator for left and right side for the last seperator */
-    .channels div:last-child,
-    .channels div:last-child a:hover {
+    .channels div:last-child {
       background-image: linear-gradient(transparent, #666, transparent),
         linear-gradient(transparent, #666, transparent);
       background-position: left 55%, right 55%;
@@ -74,15 +71,12 @@
       float: left;
 
       --elem-accent: transparent;
-      border-bottom-color: var(--elem-accent);
-      border-bottom-width: 4px;
-      border-bottom-style: solid;
+      border-bottom: 4px solid var(--elem-accent);
     }
-
 
     .channelsListElem a {
       display: block;
-      padding: 10px;
+      padding: 10px 14px 8px 14px;
       color: black;
       text-decoration: none;
       text-align: center;
@@ -108,9 +102,7 @@
 
     .channelsListElemActive {
       font-weight: bold;
-      border-bottom-color: var(--active-channel-color);
-      border-bottom-width: 4px;
-      border-bottom-style: solid;
+      border-bottom: 4px solid var(--active-channel-color);
     }
 
     .channelsListElemActive a {
@@ -125,6 +117,8 @@
       margin: 10px 0px;
       line-height: 1.3;
       font-size: 1.2rem;
+      display: flex;
+      flex-wrap: wrap;
     }
 
     .sourceLink {
@@ -158,6 +152,7 @@
     var currentlyPlayingInfo = null
     var activeChannel = null
     var lyricsService = null
+    var lastShownLyricsText = ''
 
     // entry/init call
     document.addEventListener("DOMContentLoaded", onDOMContentLoaded)
@@ -178,9 +173,7 @@
       // set max width of outer container, so when the text (of author, title or lyrics) gets too long, it doesn't mess up the layout)
       let s = document.querySelectorAll(".channelsMaxWidth")
       let maxWidth = calculateChannelsMenuWidth().toFixed(2) + 'px'
-      s.forEach(e => {
-        e.style.maxWidth = maxWidth
-      });
+      s.forEach(e => e.style.maxWidth = maxWidth);
     }
 
     function calculateChannelsMenuWidth() {
@@ -194,7 +187,6 @@
     }
 
     function onWindowLoad() {
-      console.log('onLoad')
       lyricsService = new LyricsService()
 
       let c = getActiveChannelFromUrl()
@@ -208,7 +200,7 @@
     }
 
     function getActiveChannelFromUrl() {
-      // channelId comes after an hash, for example id 64 is extracted from this url www.url.com/foo#64
+      // channelId comes after a hash, for example id 64 is extracted from this url www.url.com/foo#64
       let channelId = location.hash.substr(1)
       if (channelId) {
         let found = channels.find(c => c.id == channelId)
@@ -240,7 +232,6 @@
 
         listElem.appendChild(link)
         channelsContainer.appendChild(listElem)
-
       })
     }
 
@@ -325,6 +316,7 @@
             if (currentlyPlayingInfo.isValid) {
               let lyricsRequestForPreviousSongWasOk = () => (previousPlayingInfo && previousPlayingInfo.lyricsResult)
               if (hasSongChanged || !lyricsRequestForPreviousSongWasOk()) {
+                console.log('query lyrics')
                 currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
               }
             }
@@ -387,11 +379,15 @@
 
     function updateLyricsUi(currentlyPlayingInfo, activeChannel) {
       let lyricsUiText = determineLyricsUiText(currentlyPlayingInfo, activeChannel)
-      let lyricsElem = document.getElementById('lyrics')
-      if (lyricsUiText != lyricsElem.innerText) {
-        lyricsElem.innerText = lyricsUiText
+      if (lyricsUiText != lastShownLyricsText) {
+        lastShownLyricsText = lyricsUiText        
+        updateLyricsTextInUi(lyricsUiText)
       }
 
+      updateSourceLinkInUi()
+    }
+
+    function updateSourceLinkInUi() {
       let srcLink = document.getElementById('lyricsSourceLink')
       if (currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink) {
         srcLink.style.display = 'block'
@@ -403,6 +399,46 @@
       }
     }
 
+    function updateLyricsTextInUi(lyricsUiText) {
+      // attempt to use multiple columns 
+      const minNewlinesToUseColumns = 24
+      const newlineRegex = new RegExp('\r?\n', 'g')
+      const matches = Array.from(lyricsUiText.matchAll(newlineRegex))
+
+      let col1Elem = document.getElementById('lyrics-col1')
+      let col2Elem = document.getElementById('lyrics-col2')
+
+      if (matches && matches.length >= minNewlinesToUseColumns) {
+        let m = Math.floor(matches.length / 2)
+        let middleNewlineLength = matches[m][0].length
+        // added newline length because we need to include the newline in the first column (in case of flex wrap)
+        let middleTxtPos = matches[m].index + middleNewlineLength 
+        let secondHalf = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
+
+        // prefer to cut off at empty line (prettier because blocks stay together)
+        let emptyLineRegex = new RegExp('(?<firstDoubleNewline>(\r?\n){2})')
+        let ma = secondHalf.match(emptyLineRegex)
+        if (ma && ma.index && ma.groups && ma.groups.firstDoubleNewline) {
+          let isNotTooFarNearTheEnd = ma.index < (secondHalf.length - (secondHalf.length * 0.6))
+          if (isNotTooFarNearTheEnd) {
+            // add to middle pos because we've search only in second half, but want the absolute pos
+            // add double newline length to first part in case the 2nd column is flex-wrapped onto the first. Then we have a newline there as if we had it in one column.
+            middleTxtPos = middleTxtPos + ma.index + ma.groups.firstDoubleNewline.length 
+          }
+        }
+
+        let firstColTxt = lyricsUiText.substring(0, middleTxtPos)
+        let secondColTxt = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
+
+        col1Elem.innerText = firstColTxt
+        col2Elem.innerText = secondColTxt
+      }
+      else { // fallback: use only first column
+        col1Elem.innerText = lyricsUiText
+        col2Elem.innerText = ''
+      }
+    }
+
     function determineLyricsUiText(currentlyPlayingInfo, activeChannel) {
       if (!activeChannel || !currentlyPlayingInfo)
         return ''
@@ -411,7 +447,7 @@
       if (areLyricsAvailable)
         return currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
       else
-        return 'lyrics not found for current song'
+        return 'lyrics not found'
     }
 
     function updateSongInfoUi(currentlyPlayingInfo) {
@@ -426,7 +462,6 @@
         elem.innerHTML = ''
       }
     }
-
   </script>
 </head>
 
@@ -441,7 +476,10 @@
     <div class="channelsMaxWidth" style="clear:both; padding: 12px 0px;">
       <div id="songDetails">
         <div id="songInfo" class="songInfo"></div>
-        <div id="lyrics" class="lyrics"></div>
+        <div id="lyrics" class="lyrics">
+          <div id="lyrics-col1" style="margin-right:40px"></div>
+          <div id="lyrics-col2"></div>
+        </div>
         <a id="lyricsSourceLink" style="display:none;" class="sourceLink">source: chartlyrics.com</a>
       </div>
 
