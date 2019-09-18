@@ -416,14 +416,14 @@
         let secondHalf = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
 
         // prefer to cut off at empty line (prettier because blocks stay together)
-        let emptyLineRegex = new RegExp('(?<firstDoubleNewline>(\r?\n){2})')
+        let emptyLineRegex = new RegExp('(\r?\n){2}')
         let ma = secondHalf.match(emptyLineRegex)
-        if (ma && ma.index && ma.groups && ma.groups.firstDoubleNewline) {
+        if (ma && ma.index && ma.length > 0) {
           let isNotTooFarNearTheEnd = ma.index < (secondHalf.length - (secondHalf.length * 0.6))
           if (isNotTooFarNearTheEnd) {
             // add to middle pos because we've search only in second half, but want the absolute pos
             // add double newline length to first part in case the 2nd column is flex-wrapped onto the first. Then we have a newline there as if we had it in one column.
-            middleTxtPos = middleTxtPos + ma.index + ma.groups.firstDoubleNewline.length 
+            middleTxtPos = middleTxtPos + ma.index + ma[0].length 
           }
         }
 
