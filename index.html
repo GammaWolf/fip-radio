@@ -41,9 +41,14 @@
       cursor: pointer;
     }
 
-    /* no border of button when clicked */
-    button:focus {
-      outline: 0;
+    button:hover {
+      /* prevent outline on mouse click for chrome */
+      outline: 0 !important;
+    }
+
+    button:hover::-moz-focus-inner {
+      /* prevent outline on mouse click for ff */
+      border: 0;
     }
 
     .iconBtn {
@@ -212,6 +217,13 @@
       let s = document.querySelectorAll(".channelsMaxWidth")
       let maxWidth = calculateChannelsMenuWidth().toFixed(2) + 'px'
       s.forEach(e => e.style.maxWidth = maxWidth);
+
+      // hide outline of buttons clicked with mouse
+      var btns = document.getElementsByTagName("button")
+      for(i = 0;i < btns.length; i++) {
+        let btn = btns[i];
+        btn.addEventListener('mouseup', e => { btn.blur(); });
+      }
     }
 
     function calculateChannelsMenuWidth() {
