@@ -12,6 +12,8 @@
     :root {
       --active-channel-color: black;
       --hover-color: black;
+      --bg-color: #fdfdfd;
+      --fg-color: #060606;
     }
 
     html {
@@ -26,7 +28,28 @@
       font-size: 1.2rem;
       min-width: 320px;
       margin: 16px 8px 0px 8px;
-      background: #fefefe;
+      background: var(--bg-color);
+      color: var(--fg-color);
+      fill: var(--fg-color);
+    }
+
+    button {
+      background: var(--bg-color);
+      border: 0px solid transparent;
+      cursor: pointer;
+    }
+
+    /* no border of button when clicked */
+    button:focus {
+      outline: 0;
+    }
+
+    .iconBtn {
+
+    }
+
+    .iconBtn svg {
+      height: 20px;
     }
 
     .titleLineContainer {
@@ -41,8 +64,14 @@
     }
 
     .player {
+      max-height: 30px;
+      vertical-align: bottom;
+    }
+
+    .playerContainer {
       margin: 0px 0px 4px 0px;
       max-height: 30px;
+      display: flex;
     }
 
     .channels {
@@ -51,7 +80,7 @@
 
     /* seperator for the right side */
     .channelSeperator {
-      background-image: linear-gradient(transparent, #666, transparent);
+      background-image: linear-gradient(transparent, var(--fg-color), transparent);
       background-position: left 55%;
       background-repeat: no-repeat;
       background-size: 1px 65%;
@@ -59,8 +88,8 @@
 
     /* seperator for left and right side for the last seperator */
     .channels div:last-child {
-      background-image: linear-gradient(transparent, #666, transparent),
-        linear-gradient(transparent, #666, transparent);
+      background-image: linear-gradient(transparent, var(--fg-color), transparent),
+        linear-gradient(transparent, var(--fg-color), transparent);
       background-position: left 55%, right 55%;
       background-repeat: no-repeat;
       background-size: 1px 65%;
@@ -77,7 +106,7 @@
     .channelsListElem a {
       display: block;
       padding: 10px 14px 8px 14px;
-      color: black;
+      color: var(--fg-color);
       text-decoration: none;
       text-align: center;
     }
@@ -123,7 +152,8 @@
 
     .sourceLink {
       font-size: 0.8rem;
-      color: #aaa;
+      color: var(--fg-color);
+      opacity: 0.3;
       margin: 28px 0px;
     }
   </style>
@@ -380,7 +410,7 @@
     function updateLyricsUi(currentlyPlayingInfo, activeChannel) {
       let lyricsUiText = determineLyricsUiText(currentlyPlayingInfo, activeChannel)
       if (lyricsUiText != lastShownLyricsText) {
-        lastShownLyricsText = lyricsUiText        
+        lastShownLyricsText = lyricsUiText
         updateLyricsTextInUi(lyricsUiText)
       }
 
@@ -412,7 +442,7 @@
         let m = Math.floor(matches.length / 2)
         let middleNewlineLength = matches[m][0].length
         // added newline length because we need to include the newline in the first column (in case of flex wrap)
-        let middleTxtPos = matches[m].index + middleNewlineLength 
+        let middleTxtPos = matches[m].index + middleNewlineLength
         let secondHalf = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
 
         // prefer to cut off at empty line (prettier because blocks stay together)
@@ -423,7 +453,7 @@
           if (isNotTooFarNearTheEnd) {
             // add to middle pos because we've search only in second half, but want the absolute pos
             // add double newline length to first part in case the 2nd column is flex-wrapped onto the first. Then we have a newline there as if we had it in one column.
-            middleTxtPos = middleTxtPos + ma.index + ma[0].length 
+            middleTxtPos = middleTxtPos + ma.index + ma[0].length
           }
         }
 
@@ -462,6 +492,15 @@
         elem.innerHTML = ''
       }
     }
+
+    function toggleDarkMode() {
+      let docElem = document.documentElement
+      let rootElemStyle = getComputedStyle(docElem)
+      let fgColor = rootElemStyle.getPropertyValue('--fg-color')
+      let bgColor = rootElemStyle.getPropertyValue('--bg-color')
+      docElem.style.setProperty('--fg-color', bgColor);
+      docElem.style.setProperty('--bg-color', fgColor);
+    }
   </script>
 </head>
 
@@ -469,8 +508,15 @@
   <div id="outerContainer">
     <div class="titleLineContainer">
       <div class="title">Fip Radio Lyrics</div>
-      <audio id="player" class="player" controls autoplay></audio>
+
+      <div class="playerContainer">
+        <audio id="player" class="player" controls autoplay></audio>
+        <button title="toggle dark mode" onclick="toggleDarkMode();" class="iconBtn">            
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 12c0 6.627 5.373 12 12 12s12-5.373 12-12-5.373-12-12-12-12 5.373-12 12zm2 0c0-5.514 4.486-10 10-10v20c-5.514 0-10-4.486-10-10z"/></svg>
+        </button>
+      </div>
     </div>
+
     <nav id="channels" class="channels"></nav>
 
     <div class="channelsMaxWidth" style="clear:both; padding: 12px 0px;">
