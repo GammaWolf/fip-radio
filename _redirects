@@ -1,2 +1,2 @@
 /latest/api/*   https://www.fip.fr/latest/api/:splat                            200
-/cl?*           http://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect?:splat  200
+/cl             http://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect  200
