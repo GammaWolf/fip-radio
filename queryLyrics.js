@@ -18,7 +18,7 @@ class LyricsService {
 
   lyricsApiUrl() {
     var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
-    return protocol + '//www.panther.dynu.net/lyrics/cl' // not a field of Lyricsservice class yet, because Firefox doesn't support class fields yet
+    return protocol + '/cl' // not a field of Lyricsservice class yet, because Firefox doesn't support class fields yet
   }
 
   queryLyrics(artist, song) {
