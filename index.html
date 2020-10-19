@@ -67,13 +67,14 @@
     .titleLineContainer {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
+      align-items: center;
       flex-wrap: wrap;
     }
 
     .title {
-      font-size: 1.6rem;
-      margin: 6px 10px 4px 1px;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 6px 10px 6px 0px;
       user-select: none;
     }
 
@@ -83,7 +84,6 @@
     }
 
     .playerContainer {
-      margin: 0px 0px 4px 0px;
       max-height: 30px;
       display: flex;
     }
@@ -536,7 +536,7 @@
 <body>
   <div id="outerContainer">
     <div class="titleLineContainer">
-      <div class="title">Fip Radio Lyrics</div>
+      <h1 class="title" title="unofficial site for fip.fr radio">Fip Radio Lyrics</h1>
 
       <div class="playerContainer">
         <audio id="player" class="player" controls autoplay></audio>
