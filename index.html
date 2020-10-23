@@ -102,7 +102,7 @@
     }
 
     /* seperator for left and right side for the last seperator */
-    .channels > div:last-child {
+    .channels>div:last-child {
       background-image: linear-gradient(transparent, var(--fg-color), transparent),
         linear-gradient(transparent, var(--fg-color), transparent);
       background-position: left 55%, right 55%;
@@ -236,7 +236,7 @@
 
       // hide outline of buttons clicked with mouse
       var btns = document.getElementsByTagName("button")
-      for(i = 0;i < btns.length; i++) {
+      for (i = 0; i < btns.length; i++) {
         let btn = btns[i];
         btn.addEventListener('mouseup', e => { btn.blur(); });
       }
@@ -279,41 +279,23 @@
     function createChannelsLinks() {
       let channelsContainer = document.getElementById('channels')
       channels.forEach(c => {
-        let listElem = document.createElement('div')
+        let template = document.getElementById('channelLinkTemplate')
+        let node = template.content.cloneNode(true)
+        let listElem = node.querySelector("div");
         listElem.setAttribute('id', getChannelElemId(c.id))
-        listElem.classList.add('channelsListElem')
-        listElem.classList.add('channelSeperator')
-        let staleAccentColor = makeHslaCssStrFromHsla(c.colorAsHsl.h, c.colorAsHsl.s, c.colorAsHsl.l, 0.3)
-        let accentColor = makeHslCssStrFromHslColor(c.colorAsHsl)
-        listElem.style.setProperty('--elem-accent', staleAccentColor)
 
-        listElem.onmouseenter = e => {
-          document.documentElement.style.setProperty('--channel-hover-color', accentColor);
-        };
-        let link = document.createElement('a')
+        let staleAccentColor = makeHslaCssStrFromHsla(c.colorAsHsl.h, c.colorAsHsl.s, c.colorAsHsl.l, 0.3)
+        listElem.style.setProperty('--elem-accent', staleAccentColor)
+        let accentColor = makeHslCssStrFromHslColor(c.colorAsHsl)
+        listElem.style.setProperty('--channel-hover-color', accentColor);
+
+        let link = listElem.getElementsByTagName('a')[0]
         link.href = '#' + c.id
         link.title = c.name
         link.onclick = () => setActiveChannel(c)
         link.innerText = c.name
 
-        listElem.appendChild(link)
-
-        // container for active marker (relative to position bottom centered)
-        let containerWithActiveMarker = document.createElement('div')
-        containerWithActiveMarker.classList.add('active-marker-container')
-        // actual active marker (absolutely positioned to not take up any space)
-        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.style.setProperty('position', 'absolute')
-        svg.style.setProperty('bottom', '0')
-        svg.setAttributeNS(null, "viewBox", '0 0 122.9 63.9')
-
-        let p = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-        p.setAttributeNS(null, 'points', '61.4 0 122.9 63.9 0 63.9 61.4 0')
-        svg.appendChild(p)
-        containerWithActiveMarker.appendChild(svg)
-        listElem.appendChild(containerWithActiveMarker);
-
-        channelsContainer.appendChild(listElem)
+        channelsContainer.appendChild(node)
       })
     }
 
@@ -565,6 +547,16 @@
 </head>
 
 <body>
+
+  <template id="channelLinkTemplate">
+    <div class="channelsListElem channelSeperator">
+      <a></a>
+      <div class="active-marker-container"><svg style="position: absolute; bottom: 0px;" viewBox="0 0 122.9 63.9">
+          <polygon points="61.4 0 122.9 63.9 0 63.9 61.4 0"></polygon>
+        </svg></div>
+    </div>
+  </template>
+
   <div id="outerContainer">
     <div class="titleLineContainer">
       <h1 class="title" title="unofficial site for fip.fr radio">Fip Radio Lyrics</h1>
@@ -572,13 +564,19 @@
       <div class="playerContainer">
         <audio id="player" class="player" controls autoplay></audio>
         <div style="display:flex; margin-left: 4px;">
-        <button title="toggle dark mode" onclick="toggleDarkMode();" class="iconBtn">            
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 12c0 6.627 5.373 12 12 12s12-5.373 12-12-5.373-12-12-12-12 5.373-12 12zm2 0c0-5.514 4.486-10 10-10v20c-5.514 0-10-4.486-10-10z"/></svg>
-        </button>
-        <button title="contact" onclick="contact();" class="iconBtn">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.042 23.648c-7.813 0-12.042-4.876-12.042-11.171 0-6.727 4.762-12.125 13.276-12.125 6.214 0 10.724 4.038 10.724 9.601 0 8.712-10.33 11.012-9.812 6.042-.71 1.108-1.854 2.354-4.053 2.354-2.516 0-4.08-1.842-4.08-4.807 0-4.444 2.921-8.199 6.379-8.199 1.659 0 2.8.876 3.277 2.221l.464-1.632h2.338c-.244.832-2.321 8.527-2.321 8.527-.648 2.666 1.35 2.713 3.122 1.297 3.329-2.58 3.501-9.327-.998-12.141-4.821-2.891-15.795-1.102-15.795 8.693 0 5.611 3.95 9.381 9.829 9.381 3.436 0 5.542-.93 7.295-1.948l1.177 1.698c-1.711.966-4.461 2.209-8.78 2.209zm-2.344-14.305c-.715 1.34-1.177 3.076-1.177 4.424 0 3.61 3.522 3.633 5.252.239.712-1.394 1.171-3.171 1.171-4.529 0-2.917-3.495-3.434-5.246-.134z"/></svg>
-        </button>
-      </div>
+          <button title="toggle dark mode" onclick="toggleDarkMode();" class="iconBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path
+                d="M0 12c0 6.627 5.373 12 12 12s12-5.373 12-12-5.373-12-12-12-12 5.373-12 12zm2 0c0-5.514 4.486-10 10-10v20c-5.514 0-10-4.486-10-10z" />
+            </svg>
+          </button>
+          <button title="contact" onclick="contact();" class="iconBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path
+                d="M12.042 23.648c-7.813 0-12.042-4.876-12.042-11.171 0-6.727 4.762-12.125 13.276-12.125 6.214 0 10.724 4.038 10.724 9.601 0 8.712-10.33 11.012-9.812 6.042-.71 1.108-1.854 2.354-4.053 2.354-2.516 0-4.08-1.842-4.08-4.807 0-4.444 2.921-8.199 6.379-8.199 1.659 0 2.8.876 3.277 2.221l.464-1.632h2.338c-.244.832-2.321 8.527-2.321 8.527-.648 2.666 1.35 2.713 3.122 1.297 3.329-2.58 3.501-9.327-.998-12.141-4.821-2.891-15.795-1.102-15.795 8.693 0 5.611 3.95 9.381 9.829 9.381 3.436 0 5.542-.93 7.295-1.948l1.177 1.698c-1.711.966-4.461 2.209-8.78 2.209zm-2.344-14.305c-.715 1.34-1.177 3.076-1.177 4.424 0 3.61 3.522 3.633 5.252.239.712-1.394 1.171-3.171 1.171-4.529 0-2.917-3.495-3.434-5.246-.134z" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
