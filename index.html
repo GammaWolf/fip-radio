@@ -102,7 +102,7 @@
     }
 
     /* seperator for left and right side for the last seperator */
-    .channels div:last-child {
+    .channels > div:last-child {
       background-image: linear-gradient(transparent, var(--fg-color), transparent),
         linear-gradient(transparent, var(--fg-color), transparent);
       background-position: left 55%, right 55%;
@@ -171,6 +171,20 @@
       opacity: 0.3;
       margin: 28px 0px;
     }
+
+    .active-marker-container {
+      position: relative;
+      bottom: 0px;
+      margin: auto;
+      width: 9px;
+      height: 0;
+      fill: var(--active-channel-color);
+      display: none;
+    }
+
+    .channelsListElemActive .active-marker-container {
+      display: block;
+    }
   </style>
 
   <script async src="queryLyrics.js"></script>
@@ -184,7 +198,7 @@
         { name: 'rock', id: 64, listenUrl: baseListenUrl + 'fiprock-hifi.aac', colorAsHsl: { h: 355, s: 94, l: 59 } },
         { name: 'jazz', id: 65, listenUrl: baseListenUrl + 'fipjazz-hifi.aac', colorAsHsl: { h: 182, s: 76, l: 31 } },
         { name: 'groove', id: 66, listenUrl: baseListenUrl + 'fipgroove-hifi.aac', colorAsHsl: { h: 255, s: 80, l: 66 } },
-        { name: 'pop', id: 77, listenUrl: baseListenUrl + 'fippop-hifi.aac', colorAsHsl: { h: 141, s: 60, l: 39 } },
+        { name: 'pop', id: 78, listenUrl: baseListenUrl + 'fippop-hifi.aac', colorAsHsl: { h: 141, s: 60, l: 39 } },
         { name: 'électro', id: 74, listenUrl: baseListenUrl + 'fipelectro-hifi.aac', colorAsHsl: { h: 190, s: 100, l: 50 } },
         { name: 'monde', id: 69, listenUrl: baseListenUrl + 'fipworld-hifi.aac', colorAsHsl: { h: 35, s: 85, l: 58 } },
         { name: 'reggae', id: 71, listenUrl: baseListenUrl + 'fipreggae-hifi.aac', colorAsHsl: { h: 114, s: 27, l: 36 } },
@@ -283,6 +297,22 @@
         link.innerText = c.name
 
         listElem.appendChild(link)
+
+        // container for active marker (relative to position bottom centered)
+        let containerWithActiveMarker = document.createElement('div')
+        containerWithActiveMarker.classList.add('active-marker-container')
+        // actual active marker (absolutely positioned to not take up any space)
+        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.style.setProperty('position', 'absolute')
+        svg.style.setProperty('bottom', '0')
+        svg.setAttributeNS(null, "viewBox", '0 0 122.9 63.9')
+
+        let p = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        p.setAttributeNS(null, 'points', '61.4 0 122.9 63.9 0 63.9 61.4 0')
+        svg.appendChild(p)
+        containerWithActiveMarker.appendChild(svg)
+        listElem.appendChild(containerWithActiveMarker);
+
         channelsContainer.appendChild(listElem)
       })
     }
