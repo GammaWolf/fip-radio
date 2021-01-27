@@ -18,6 +18,11 @@
       --fg-color: #202020;
     }
 
+    [data-theme="dark"] {
+      --bg-color: #202020;
+      --fg-color: #fdfdfa;
+    }
+
     html {
       /* prevents scrollbar appearance to shift layout, but always shows vertical scrollbar */
       overflow-y: scroll;
@@ -257,6 +262,11 @@
 
     // functions
     function onDOMContentLoaded() {
+      let theme = localStorage.getItem('theme')
+      if (theme === null) {
+        theme = 'light'
+      }
+      applyTheme(theme)
       createChannelsLinks()
 
       // set max width of outer container, so when the text (of author, title or lyrics) gets too long, it doesn't mess up the layout)
@@ -559,20 +569,27 @@
     }
 
     function toggleDarkMode() {
-      let docElem = document.documentElement
-      let rootElemStyle = getComputedStyle(docElem)
-      let fgColor = rootElemStyle.getPropertyValue('--fg-color')
-      let bgColor = rootElemStyle.getPropertyValue('--bg-color')
-      docElem.style.setProperty('--fg-color', bgColor);
-      docElem.style.setProperty('--bg-color', fgColor);
+      let theme = localStorage.getItem('theme')
+      if (theme === 'dark') {
+        theme = 'light'
+      } else {
+        theme = 'dark'
+      }
+      localStorage.setItem('theme', theme)
+
+      applyTheme(theme)
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme)
     }
 
     function contact() {
       let a = 'ma'
       let x = 'look.c'
-      let m = 'zim_tigerclaw'.replace('_', '') + '\u0040' + 'out' + x + 'om';
-      let u = a + 'ilt' + 'o' + ':' + m;
-      window.location.href = u;
+      let m = 'zim_tigerclaw'.replace('_', '') + '\u0040' + 'out' + x + 'om'
+      let u = a + 'ilt' + 'o' + ':' + m
+      window.location.href = u
     }
   </script>
 </head>
