@@ -26,6 +26,8 @@
     html {
       /* prevents scrollbar appearance to shift layout, but always shows vertical scrollbar */
       overflow-y: scroll;
+      /* hides inactive vertical scrollbar (transparent track) */
+      scrollbar-color: #7f7f7f transparent;
     }
 
     body {
@@ -264,7 +266,7 @@
     function onDOMContentLoaded() {
       let theme = localStorage.getItem('theme')
       if (theme === null) {
-        theme = 'light'
+        theme = 'dark'
       }
       applyTheme(theme)
       createChannelsLinks()
