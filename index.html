@@ -242,6 +242,7 @@
         { name: 'nouveautés', id: 70, listenUrl: baseListenUrl + 'fipnouveautes-hifi.aac', colorAsHsl: { h: 217, s: 84, l: 57 } },
       ]
     const autoUpdateIntervalInMs = 10000
+    const defaultTheme = 'dark'
 
     // state
     var msg = ''
@@ -266,7 +267,7 @@
     function onDOMContentLoaded() {
       let theme = localStorage.getItem('theme')
       if (theme === null) {
-        theme = 'dark'
+        theme = defaultTheme
       }
       applyTheme(theme)
       createChannelsLinks()
@@ -571,7 +572,10 @@
     }
 
     function toggleDarkMode() {
-      let theme = localStorage.getItem('theme')
+      let theme = document.documentElement.getAttribute('data-theme')
+      if (theme === null)
+        theme = defaultTheme 
+
       if (theme === 'dark') {
         theme = 'light'
       } else {
