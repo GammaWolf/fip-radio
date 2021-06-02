@@ -93,8 +93,8 @@ class LyricsService {
     // \W Matches any alphanumeric character from the basic Latin alphabet, including the underscore. Equivalent to [A-Za-z0-9_]
     // gi: global, case insensitive
     let rex = /\W/gi
-    let la = a.toLocaleLowerCase().replace(rex, '')
-    let lb = b.toLocaleLowerCase().replace(rex, '')
+    let la = a.toLocaleLowerCase().replace('&', 'and').replace(rex, '')
+    let lb = b.toLocaleLowerCase().replace('&', 'and').replace(rex, '')
     return la.includes(lb) || lb.includes(la)
   }
 
