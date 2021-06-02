@@ -423,8 +423,14 @@
             if (currentlyPlayingInfo.isValid) {
               let lyricsRequestForPreviousSongWasOk = () => (previousPlayingInfo && previousPlayingInfo.lyricsResult)
               if (hasSongChanged || !lyricsRequestForPreviousSongWasOk()) {
-                console.log('query lyrics')
+                console.log('query lyrics for ' + currentlyPlayingInfo.artist + ', ' + currentlyPlayingInfo.song)
                 currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
+                if (currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.success) {
+                  console.log('found lyrics')
+                } else {
+                  errorMsg = x ? x.error : ''
+                  console.log('could not find lyrics: ' + errorMsg)
+                }
               }
             }
           }

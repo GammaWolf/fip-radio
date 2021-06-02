@@ -16,9 +16,12 @@ function LyricsNotFoundResult(error) {
 
 class LyricsService {
 
-  lyricsApiUrl() {
-    var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
-    return protocol + '/cl' // not a field of Lyricsservice class yet, because Firefox doesn't support class fields yet
+  constructor(lyricsApiUrl) {
+    if (!lyricsApiUrl) {
+      var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
+      lyricsApiUrl = protocol + '/cl'
+    }
+    this.lyricsApiUrl = lyricsApiUrl
   }
 
   queryLyrics(artist, song) {
@@ -31,7 +34,7 @@ class LyricsService {
     const artistMaxLen = 75
     const songMaxLen = 125
     let params = 'artist=' + encodeURIComponent(artist.substring(0, artistMaxLen)) + "&song=" + encodeURIComponent(song.substring(0, songMaxLen))
-    let url = this.lyricsApiUrl() + '?' + params
+    let url = this.lyricsApiUrl + '?' + params
     return fetch(url)
       .then(response => {
         if (response.ok) {
