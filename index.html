@@ -122,12 +122,12 @@
       float: left;
 
       --elem-accent: transparent;
-      border-bottom: 4px solid var(--elem-accent);
+      box-shadow: inset var(--elem-accent) 0px -4px;
     }
 
     .channelsListElem a {
       display: block;
-      padding: 10px 14px 8px 14px;
+      padding: 10px 14px;
       color: var(--fg-color);
       text-decoration: none;
       text-align: center;
@@ -148,12 +148,12 @@
     }
 
     .channelsListElem:hover {
-      border-bottom-color: var(--channel-hover-color);
+      box-shadow: inset var(--channel-hover-color) 0px -4px;
     }
 
     .channelsListElemActive {
       font-weight: bold;
-      border-bottom: 4px solid var(--active-channel-color);
+      box-shadow: inset var(--active-channel-color) 0px -4px;
     }
 
     .channelsListElemActive a {
@@ -181,7 +181,7 @@
 
     .active-marker-container {
       position: relative;
-      bottom: 0px;
+      bottom: 4px;
       margin: auto;
       width: 9px;
       height: 0;
