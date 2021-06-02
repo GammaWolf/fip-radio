@@ -428,7 +428,7 @@
                 if (currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.success) {
                   console.log('found lyrics')
                 } else {
-                  errorMsg = x ? x.error : ''
+                  errorMsg = currentlyPlayingInfo.lyricsResult ? currentlyPlayingInfo.lyricsResult.error : ''
                   console.log('could not find lyrics: ' + errorMsg)
                 }
               }
