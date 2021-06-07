@@ -512,9 +512,12 @@
     function findCurrentlyPlaying(json) {
       try {
         let songInfo = json.data.now.song
+        if (songInfo == null) {
+          console.log('songInfo null')
+        }
         let r = new CurrentlyPlayingInfo(
-          songInfo.interpreters.join(', '), 
-          songInfo.title)
+          songInfo && songInfo.interpreters ? songInfo.interpreters.join(', ') : null, 
+          songInfo ? songInfo.title : null)
 
           r.serverTime = json.data.now.server_time
           r.nextRefresh = json.data.now.next_refresh
