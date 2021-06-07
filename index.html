@@ -240,7 +240,7 @@
         { name: 'reggae', id: 71, listenUrl: baseListenUrl + 'fipreggae-hifi.aac', colorAsHsl: { h: 114, s: 27, l: 36 } },
         { name: 'nouveautés', id: 70, listenUrl: baseListenUrl + 'fipnouveautes-hifi.aac', colorAsHsl: { h: 217, s: 84, l: 57 } },
       ]
-    const autoUpdateIntervalInMs = 10000
+    const autoUpdateIntervalInMs = 6000
     const defaultTheme = 'dark'
 
     // state
@@ -249,6 +249,7 @@
     var activeChannel = null
     var lyricsService = null
     var lastShownLyricsText = ''
+    var updateTimeoutId = null
 
     // entry/init call
     document.addEventListener("DOMContentLoaded", onDOMContentLoaded)
@@ -258,8 +259,10 @@
     function CurrentlyPlayingInfo(artist, song) {
       this.artist = artist;
       this.song = song;
-      this.isValid = artist && song
+      this.isValid = artist != null && artist != '' && song != null && song != '';
       this.lyricsResult = null;
+      this.serverTime = null;
+      this.nextRefresh = null;
     }
 
     // functions
@@ -302,9 +305,6 @@
         c = channels[0] // default to main channel
 
       setActiveChannel(c)
-
-      // could be improved to not check in fixed intervals, but just before the song ends (since the song start/end times are returned from fip meta data)
-      setInterval(() => update(), autoUpdateIntervalInMs)
     }
 
     function getActiveChannelFromUrl() {
@@ -401,6 +401,10 @@
 
     async function update() {
       try {
+        // clear any timeout that might still be active
+        clearTimeout(updateTimeoutId)
+        updateTimeoutId = null
+
         if (!activeChannel) {
           msg = "Please select a channel!"
           return
@@ -414,14 +418,26 @@
         let freshCurrentlyPlayingInfo = await fetchCurrentlyPlaying()
         if (freshCurrentlyPlayingInfo) {
           let hasSongChanged = !previousPlayingInfo || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
+          console.log('hasSongChanged ' + hasSongChanged)
           if (hasSongChanged) {
             currentlyPlayingInfo = freshCurrentlyPlayingInfo
             updateUi() // update ui before async lyrics query
-
+            
+            console.log('currentlyPlayingInfo.serverTime ' + currentlyPlayingInfo.serverTime)
+            console.log('currentlyPlayingInfo.nextRefresh ' + currentlyPlayingInfo.nextRefresh)
+            
             // fetch lyrics
             if (currentlyPlayingInfo.isValid) {
+              if (currentlyPlayingInfo.serverTime && currentlyPlayingInfo.nextRefresh) {
+                let numSecondsToNextRefresh = currentlyPlayingInfo.nextRefresh - currentlyPlayingInfo.serverTime
+                // extra delay value for the request for the next title because inbetween songs, the api return no now value
+                let magicDelayInSeconds = 2
+                updateTimeoutId = setTimeout(() => update(), (numSecondsToNextRefresh + magicDelayInSeconds) * 1000)
+                console.log('next update scheduled in ' + numSecondsToNextRefresh + ' seconds')
+              }
+              
               let lyricsRequestForPreviousSongWasOk = () => (previousPlayingInfo && previousPlayingInfo.lyricsResult)
-              if (hasSongChanged || !lyricsRequestForPreviousSongWasOk()) {
+              if (!lyricsRequestForPreviousSongWasOk()) {
                 console.log('query lyrics for ' + currentlyPlayingInfo.artist + ', ' + currentlyPlayingInfo.song)
                 currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
                 if (currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.success) {
@@ -443,6 +459,10 @@
         msg = 'error: ' + err.message
       }
       finally {
+        if (updateTimeoutId === null) {
+          updateTimeoutId = setTimeout(() => update(), autoUpdateIntervalInMs)
+          console.log('next update scheduled in finally in ' + autoUpdateIntervalInMs/1000 + ' seconds')
+        }
         updateUi()
       }
     };
@@ -451,8 +471,16 @@
       if (!activeChannel)
         return Promise.reject(new Error('no channel active'))
 
+      console.log('fetching currently playing')
       let url = "latest/api/graphql?operationName=Now&variables={%22stationId%22:" + activeChannel.id + ",%22previousTrackLimit%22:1}&extensions={%22persistedQuery%22:{%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22}}"
-      let response = await fetch(url)
+
+      let response = await fetch(url, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'pragma': 'no-cache'
+        }
+      })
+
       let json = null
       try {
         json = await response.json()
@@ -475,7 +503,13 @@
     function findCurrentlyPlaying(json) {
       try {
         let songInfo = json.data.now.song
-        return new CurrentlyPlayingInfo(songInfo.interpreters.join(', '), songInfo.title)
+        let r = new CurrentlyPlayingInfo(
+          songInfo.interpreters.join(', '), 
+          songInfo.title)
+
+          r.serverTime = json.data.now.server_time
+          r.nextRefresh = json.data.now.next_refresh
+          return r
       }
       catch (err) {
         console.log('err getting currently playing', err)
