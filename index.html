@@ -10,12 +10,12 @@
   <title>Fip Radio Lyrics</title>
   <style>
     :root {
-      --active-channel-color: black;
-      --channel-hover-color: black;
-      /* luminance 50%, so it works for light and dark theme */
-      --icon-hover-color: #148DEA;
       --bg-color: #fdfdfa;
       --fg-color: #202020;
+      --channel-hover-color: black;
+      --active-channel-color: var(--bg-color);
+      /* luminance 50%, so it works for light and dark theme */
+      --icon-hover-color: #148DEA;
     }
 
     [data-theme="dark"] {
@@ -106,7 +106,7 @@
       float: left;
 
       --elem-accent: transparent;
-      box-shadow: inset var(--elem-accent) 0px -4px;
+      box-shadow: inset var(--elem-accent) 0px -3px;
     }
 
     .channelsListElem a {
@@ -133,12 +133,12 @@
     }
 
     .channelsListElem:hover {
-      box-shadow: inset var(--channel-hover-color) 0px -4px;
+      box-shadow: inset var(--channel-hover-color) 0px -3px;
     }
 
     .channelsListElemActive {
       font-weight: bold;
-      box-shadow: inset var(--active-channel-color) 0px -4px;
+      box-shadow: inset var(--active-channel-color) 0px -3px;
     }
 
     .channelsListElemActive a {
@@ -166,7 +166,7 @@
 
     .active-marker-container {
       position: relative;
-      bottom: 4px;
+      bottom: 3px;
       margin: auto;
       width: 9px;
       height: 0;
