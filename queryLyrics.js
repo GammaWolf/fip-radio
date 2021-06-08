@@ -14,6 +14,8 @@ function LyricsNotFoundResult(error) {
   this.error = error;
 }
 
+const NO_VALID_WORDS_LEFT_BECAUSE_OF_STOPWORDS_ERROR_BODY = 'SearchLyricDirect: No valid words left in contains list, this could be caused by stop words.'
+
 class LyricsService {
 
   constructor(lyricsApiUrl) {
@@ -29,25 +31,31 @@ class LyricsService {
       .then(xml => this.parseLyricsXmlResponse(xml, artist, song))
   }
 
-  makeLyricsRequest(artist, song) {
+  async makeLyricsRequest(artist, song) {
     // SearchLyricDirect: The artist max length is 75 characters, song max length is 125 characters.
     const artistMaxLen = 75
     const songMaxLen = 125
     let params = 'artist=' + encodeURIComponent(artist.substring(0, artistMaxLen)) + "&song=" + encodeURIComponent(song.substring(0, songMaxLen))
     let url = this.lyricsApiUrl + '?' + params
-    return fetch(url)
-      .then(response => {
-        if (response.ok) {
-          return response.text().catch(err => '')
-        }
-        else {
-          let errorMsg = JSON.stringify(this.extractResponseStatusDetails(response))
-          return Promise.reject(new Error(errorMsg))
-        }
-      })
+    let response = await fetch(url)
+    let bodyText = await response.text().catch(err => null)
+
+    if (response.ok) {
+      return bodyText
+    } else if (response.status === 500 && bodyText && bodyText.trim() === NO_VALID_WORDS_LEFT_BECAUSE_OF_STOPWORDS_ERROR_BODY) {
+      return bodyText
+    } else {
+      let responseDetails = this.extractResponseStatusDetails(response)
+      responseDetails.bodyText = bodyText
+      throw new Error(JSON.stringify(responseDetails))
+    }
   }
 
   parseLyricsXmlResponse(xml, requestedArtist, requestedSong) {
+    if (xml && xml.trim() === NO_VALID_WORDS_LEFT_BECAUSE_OF_STOPWORDS_ERROR_BODY) {
+      return new LyricsNotFoundResult("lyrics not found, because all words for search got removed because all were stopwords")
+    }
+
     let parser = new DOMParser();
     let xmlDoc = parser.parseFromString(xml, "text/xml");
     try {
@@ -58,12 +66,12 @@ class LyricsService {
 
       // ensure artist returned from lyrics search is the same as the requested
       let artist = ''
-      try { artist = this.getXmlValue(xmlDoc, 'LyricArtist')}
-      catch (err) { console.log('error getting artist')}
+      try { artist = this.getXmlValue(xmlDoc, 'LyricArtist') }
+      catch (err) { console.log('error getting artist') }
       if (artist && !this.isSimilar(artist, requestedArtist)) {
         return new LyricsNotFoundResult('artist expected: ' + requestedArtist + ', but was: ' + artist)
       }
-      
+
       // ensure song returned from lyrics search is the same as the requested
       let song = ''
       try { song = this.getXmlValue(xmlDoc, 'LyricSong') }
@@ -89,7 +97,7 @@ class LyricsService {
     }
   }
 
-  isSimilar(a,b) {
+  isSimilar(a, b) {
     if (!a || !b) return false;
 
     // remove special chars, because those
