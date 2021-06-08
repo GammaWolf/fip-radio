@@ -422,9 +422,7 @@
             if (currentlyPlayingInfo.isValid) {
               if (currentlyPlayingInfo.serverTime && currentlyPlayingInfo.nextRefresh) {
                 let numSecondsToNextRefresh = currentlyPlayingInfo.nextRefresh - currentlyPlayingInfo.serverTime
-                // extra delay value for the request for the next title because inbetween songs, the api return no now value
-                let magicDelayInSeconds = 2
-                updateTimeoutId = setTimeout(() => update(), (numSecondsToNextRefresh + magicDelayInSeconds) * 1000)
+                updateTimeoutId = setTimeout(() => update(), numSecondsToNextRefresh * 1000)
                 console.log('next update scheduled in ' + numSecondsToNextRefresh + ' seconds')
               }
 
