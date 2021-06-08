@@ -467,7 +467,7 @@
       let url = "latest/api/graphql?operationName=Now&variables={%22stationId%22:" + activeChannel.id + ",%22previousTrackLimit%22:1}&extensions={%22persistedQuery%22:{%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22}}"
 
       if (isDevMode()) {
-        url = "https://fip.fr/" + url
+        url = "https://www.fip.fr/" + url
       }
       
       let response = await fetch(url, {
@@ -485,7 +485,7 @@
         console.log('err converting response to json', err)
       }
       if (json)
-        return findCurrentlyPlaying(json)
+        return currentlyPlayingFromJson(json)
       else
         return null
     }
@@ -496,18 +496,42 @@
       updateMsgUi(msg)
     }
 
-    function findCurrentlyPlaying(json) {
+    function currentlyPlayingFromJson(json) {
       try {
         let songInfo = json.data.now.song
         if (songInfo == null) {
           console.log('songInfo null')
         }
-        let r = new CurrentlyPlayingInfo(
-          songInfo && songInfo.interpreters ? songInfo.interpreters.join(', ') : null, 
-          songInfo ? songInfo.title : null)
 
-          r.serverTime = json.data.now.server_time
-          r.nextRefresh = json.data.now.next_refresh
+        let serverTime = json.data.now.server_time
+        let nextRefresh = json.data.now.next_refresh
+
+        let interpreters = null
+        let songTitle = null
+
+        if (songInfo != null) {
+          interpreters = songInfo.interpreters ? songInfo.interpreters.join(', ') : null
+          songTitle = songInfo.title
+        } else {
+          // sometimes json.data.now.song is null. but the next song in the json is already playing -> use that
+          let nextTracks = json.data.nextTracks 
+          if (nextTracks && nextTracks.length > 0) {
+            nextTrackStartTime = nextTracks[0].start_time
+            // has next track started playing already
+            if (serverTime >= nextTrackStartTime) {
+              console.log('using data from json nextTitles')
+              interpreters = nextTracks[0].title
+              songTitle = nextTracks[0].subtitle
+            }
+          }
+        }
+
+        let r = new CurrentlyPlayingInfo(
+          interpreters, 
+          songTitle)
+
+          r.serverTime = serverTime
+          r.nextRefresh = nextRefresh
           return r
       }
       catch (err) {
