@@ -318,7 +318,7 @@
         let listElem = node.querySelector("div");
         listElem.setAttribute('id', getChannelElemId(c.id))
 
-        let staleAccentColor = makeHslaCssStrFromHsla(c.colorAsHsl.h, c.colorAsHsl.s, c.colorAsHsl.l, 0.3)
+        let staleAccentColor = makeHslaCssStrFromHsla(c.colorAsHsl.h, c.colorAsHsl.s, c.colorAsHsl.l, 0.2)
         listElem.style.setProperty('--elem-accent', staleAccentColor)
         let accentColor = makeHslCssStrFromHslColor(c.colorAsHsl)
         listElem.style.setProperty('--channel-hover-color', accentColor);
