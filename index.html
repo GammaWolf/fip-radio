@@ -469,8 +469,8 @@
       
       let response = await fetch(url, {
         headers: {
-          'Cache-Control': 'no-store',
-          'pragma': 'no-cache'
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache'
         }
       })
 
