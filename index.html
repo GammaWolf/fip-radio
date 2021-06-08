@@ -427,18 +427,17 @@
                 updateTimeoutId = setTimeout(() => update(), (numSecondsToNextRefresh + magicDelayInSeconds) * 1000)
                 console.log('next update scheduled in ' + numSecondsToNextRefresh + ' seconds')
               }
-              
-              let lyricsRequestForPreviousSongWasOk = () => (previousPlayingInfo && previousPlayingInfo.lyricsResult)
-              if (!lyricsRequestForPreviousSongWasOk()) {
-                console.log('query lyrics for ' + currentlyPlayingInfo.artist + ', ' + currentlyPlayingInfo.song)
-                currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
-                if (currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.success) {
-                  console.log('found lyrics')
-                } else {
-                  errorMsg = currentlyPlayingInfo.lyricsResult ? currentlyPlayingInfo.lyricsResult.error : ''
-                  console.log('could not find lyrics: ' + errorMsg)
-                }
+
+              console.log('query lyrics for ' + currentlyPlayingInfo.artist + ', ' + currentlyPlayingInfo.song)
+              currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
+              if (currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.success) {
+                console.log('found lyrics')
+              } else {
+                errorMsg = currentlyPlayingInfo.lyricsResult ? currentlyPlayingInfo.lyricsResult.error : ''
+                console.log('could not find lyrics: ' + errorMsg)
               }
+            } else {
+              console.log('currentlyPlaying is not valid')
             }
           }
         } else {
