@@ -461,7 +461,7 @@
         return Promise.reject(new Error('no channel active'))
 
       console.log('fetching currently playing')
-      let url = "latest/api/graphql?operationName=Now&variables={%22stationId%22:" + activeChannel.id + ",%22previousTrackLimit%22:1}&extensions={%22persistedQuery%22:{%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22}}"
+      let url = "latest/api/graphql?operationName=Now&variables=%7B%22stationId%22:" + activeChannel.id + ",%22previousTrackLimit%22:1%7D&extensions=%7B%22persistedQuery%22:%7B%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22%7D%7D"
 
       if (isDevMode()) {
         url = "https://www.fip.fr/" + url
@@ -469,7 +469,7 @@
       
       let response = await fetch(url, {
         headers: {
-          'Cache-Control': 'no-cache',
+          'Cache-Control': 'no-store',
           'pragma': 'no-cache'
         }
       })
