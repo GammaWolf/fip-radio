@@ -6,7 +6,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Live lyrics for Fip Radio.">
-  <link rel="icon" href="data:image/svg+xml;,%0A%3Csvg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 0 24 24' width='24'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/%3E%3C/svg%3E">
+  <link rel="icon"
+    href="data:image/svg+xml;,%0A%3Csvg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 0 24 24' width='24'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/%3E%3C/svg%3E">
   <title>Fip Radio Lyrics</title>
   <style>
     :root {
@@ -411,21 +412,26 @@
         if (freshCurrentlyPlayingInfo) {
           let hasSongChanged = !previousPlayingInfo || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
           console.log('hasSongChanged ' + hasSongChanged)
-          if (hasSongChanged) {
-            currentlyPlayingInfo = freshCurrentlyPlayingInfo
-            updateUi() // update ui before async lyrics query
-            
-            console.log('currentlyPlayingInfo.serverTime ' + currentlyPlayingInfo.serverTime)
-            console.log('currentlyPlayingInfo.nextRefresh ' + currentlyPlayingInfo.nextRefresh)
-            
-            // fetch lyrics
-            if (currentlyPlayingInfo.isValid) {
-              if (currentlyPlayingInfo.serverTime && currentlyPlayingInfo.nextRefresh) {
-                let numSecondsToNextRefresh = currentlyPlayingInfo.nextRefresh - currentlyPlayingInfo.serverTime
+          currentlyPlayingInfo = freshCurrentlyPlayingInfo
+          updateUi() // update ui before async lyrics query
+
+          if (currentlyPlayingInfo.isValid) {
+            let nowInSecs = Math.round(Date.now() / 1000)
+            console.log('times: ' + JSON.stringify({ nowInSecs: nowInSecs, serverTime: currentlyPlayingInfo.serverTime, nextRefresh: currentlyPlayingInfo.nextRefresh }))
+
+            // schedule next update
+            if (currentlyPlayingInfo.serverTime && currentlyPlayingInfo.nextRefresh) {
+              let numSecondsToNextRefresh = Math.max(currentlyPlayingInfo.nextRefresh - nowInSecs, 3)
+              if (Number.isInteger(numSecondsToNextRefresh) && numSecondsToNextRefresh > 0) {
                 updateTimeoutId = setTimeout(() => update(), numSecondsToNextRefresh * 1000)
                 console.log('next update scheduled in ' + numSecondsToNextRefresh + ' seconds')
+              } else {
+                console.warn('numSecondsToNextRefresh has bad value: ' + numSecondsToNextRefresh)
               }
+            }
 
+            if (hasSongChanged) {
+              // fetch lyrics
               console.log('query lyrics for ' + currentlyPlayingInfo.artist + ', ' + currentlyPlayingInfo.song)
               currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
               if (currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.success) {
@@ -435,8 +441,11 @@
                 console.log('could not find lyrics: ' + errorMsg)
               }
             } else {
-              console.log('currentlyPlaying is not valid')
+              console.log('song has not changed')
             }
+
+          } else {
+            console.log('currentlyPlaying is not valid')
           }
         } else {
           currentlyPlayingInfo = null
@@ -450,23 +459,29 @@
       finally {
         if (updateTimeoutId === null) {
           updateTimeoutId = setTimeout(() => update(), autoUpdateIntervalInMs)
-          console.log('next update scheduled in finally in ' + autoUpdateIntervalInMs/1000 + ' seconds')
+          console.log('next update scheduled in finally in ' + autoUpdateIntervalInMs / 1000 + ' seconds')
         }
         updateUi()
       }
     };
 
-    async function fetchCurrentlyPlaying() {
+    async function fetchCurrentlyPlaying(retryAttemptNo) {
       if (!activeChannel)
         return Promise.reject(new Error('no channel active'))
 
       console.log('fetching currently playing')
       let url = "latest/api/graphql?operationName=Now&variables=%7B%22stationId%22:" + activeChannel.id + ",%22previousTrackLimit%22:1%7D&extensions=%7B%22persistedQuery%22:%7B%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22%7D%7D"
 
+      // Add new random guid for each rq to prevent getting stale/cached results.
+      // Had cases where it responded with over 10 minutes old data, where Date.now() has way passed next_refresh.
+      // Retrying directly after the stale response also often failed to get fresher data.
+      // This issue seems to be on fip server side, could replicate with curl.
+      url += '&x=' + uuidv4()
+
       if (isDevMode()) {
         url = "https://www.fip.fr/" + url
       }
-      
+
       let response = await fetch(url, {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate',
@@ -481,10 +496,39 @@
       catch (err) {
         console.log('err converting response to json', err)
       }
-      if (json)
+      if (json) {
+        // don't use data if stale
+        if (IsFipResponseStale(json)) {
+          console.log('detected stale response')
+          return null
+        }
         return currentlyPlayingFromJson(json)
-      else
+      }
+      else {
         return null
+      }
+    }
+
+     // https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
+     function uuidv4() {
+      return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+      );
+    }
+
+    function IsFipResponseStale(json) {
+      let nowInSeconds = Math.round(Date.now() / 1000)
+
+      if (json.data.now && json.data.now.next_refresh) {
+        let isStale = nowInSeconds >= json.data.now.next_refresh
+        if (isStale) {
+          console.log('IsFipResponseStale: true, next_refresh ' + json.data.now.next_refresh + ', now ' + nowInSeconds)
+        }
+        return isStale
+      } else {
+        console.log('could not determine next_refresh, returning stale')
+        return true
+      }
     }
 
     function updateUi() {
@@ -511,7 +555,7 @@
           songTitle = songInfo.title
         } else {
           // sometimes json.data.now.song is null. but the next song in the json is already playing -> use that
-          let nextTracks = json.data.nextTracks 
+          let nextTracks = json.data.nextTracks
           if (nextTracks && nextTracks.length > 0) {
             nextTrackStartTime = nextTracks[0].start_time
             // has next track started playing already
@@ -524,12 +568,12 @@
         }
 
         let r = new CurrentlyPlayingInfo(
-          interpreters, 
+          interpreters,
           songTitle)
 
-          r.serverTime = serverTime
-          r.nextRefresh = nextRefresh
-          return r
+        r.serverTime = serverTime
+        r.nextRefresh = nextRefresh
+        return r
       }
       catch (err) {
         console.log('err getting currently playing', err)
