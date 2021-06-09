@@ -275,7 +275,26 @@
         btn.addEventListener('mouseup', e => { btn.blur(); });
       }
     }
+    
+    function onWindowLoad() {
+      if (isDevMode()) {
+        lyricsService = new LyricsService("http://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect")
+      } else {
+        lyricsService = new LyricsService()
+      }
+      
+      let c = getActiveChannelFromUrl()
+      if (!c)
+      c = channels[0] // default to main channel
+      
+      setActiveChannel(c)
 
+      // focus active channel menu item, so tab navigation start point is the selected menu item, blur() to hide visual focus helper
+      activeChannelMenuLink = document.querySelector('.channelsListElemActive a');
+      activeChannelMenuLink.focus()
+      activeChannelMenuLink.blur()
+    }
+    
     function calculateChannelsMenuWidth() {
       // sum up menu part widths to get whole menu width 
       let channelsMenuWidth = 0.0
@@ -284,20 +303,6 @@
         channelsMenuWidth += channelsList.children[i].getBoundingClientRect().width
       }
       return channelsMenuWidth
-    }
-
-    function onWindowLoad() {
-      if (isDevMode()) {
-        lyricsService = new LyricsService("http://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect")
-      } else {
-        lyricsService = new LyricsService()
-      }
-
-      let c = getActiveChannelFromUrl()
-      if (!c)
-        c = channels[0] // default to main channel
-
-      setActiveChannel(c)
     }
 
     function getActiveChannelFromUrl() {
