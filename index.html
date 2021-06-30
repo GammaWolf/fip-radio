@@ -275,18 +275,18 @@
         btn.addEventListener('mouseup', e => { btn.blur(); });
       }
     }
-    
+
     function onWindowLoad() {
       if (isDevMode()) {
         lyricsService = new LyricsService("http://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect")
       } else {
         lyricsService = new LyricsService()
       }
-      
+
       let c = getActiveChannelFromUrl()
       if (!c)
-      c = channels[0] // default to main channel
-      
+        c = channels[0] // default to main channel
+
       setActiveChannel(c)
 
       // focus active channel menu item, so tab navigation start point is the selected menu item, blur() to hide visual focus helper
@@ -294,7 +294,7 @@
       activeChannelMenuLink.focus()
       activeChannelMenuLink.blur()
     }
-    
+
     function calculateChannelsMenuWidth() {
       // sum up menu part widths to get whole menu width 
       let channelsMenuWidth = 0.0
@@ -414,47 +414,49 @@
         // fetch song
         let previousPlayingInfo = currentlyPlayingInfo
         let freshCurrentlyPlayingInfo = await fetchCurrentlyPlaying()
-        if (freshCurrentlyPlayingInfo) {
-          let hasSongChanged = !previousPlayingInfo || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
-          console.log('hasSongChanged ' + hasSongChanged)
+
+        if (!freshCurrentlyPlayingInfo) {
+          currentlyPlayingInfo = null
+          msg = "could not find what's on"
+          return
+        }
+
+        if (!freshCurrentlyPlayingInfo.isValid) {
+          console.log('currentlyPlaying is not valid')
+          return
+        }
+
+        let nowInSecs = Math.round(Date.now() / 1000)
+        console.log('times: ' + JSON.stringify({ nowInSecs: nowInSecs, serverTime: freshCurrentlyPlayingInfo.serverTime, nextRefresh: freshCurrentlyPlayingInfo.nextRefresh }))
+
+        // schedule next update
+        if (freshCurrentlyPlayingInfo.serverTime && freshCurrentlyPlayingInfo.nextRefresh) {
+          let numSecondsToNextRefresh = Math.max(freshCurrentlyPlayingInfo.nextRefresh - nowInSecs, 3)
+          if (Number.isInteger(numSecondsToNextRefresh) && numSecondsToNextRefresh > 0) {
+            updateTimeoutId = setTimeout(() => update(), numSecondsToNextRefresh * 1000)
+            console.log('next update scheduled in ' + numSecondsToNextRefresh + ' seconds')
+          } else {
+            console.warn('numSecondsToNextRefresh has bad value: ' + numSecondsToNextRefresh)
+          }
+        }
+
+        let hasSongChanged = !previousPlayingInfo || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
+        console.log('hasSongChanged ' + hasSongChanged)
+        if (hasSongChanged) {
           currentlyPlayingInfo = freshCurrentlyPlayingInfo
           updateUi() // update ui before async lyrics query
 
-          if (currentlyPlayingInfo.isValid) {
-            let nowInSecs = Math.round(Date.now() / 1000)
-            console.log('times: ' + JSON.stringify({ nowInSecs: nowInSecs, serverTime: currentlyPlayingInfo.serverTime, nextRefresh: currentlyPlayingInfo.nextRefresh }))
-
-            // schedule next update
-            if (currentlyPlayingInfo.serverTime && currentlyPlayingInfo.nextRefresh) {
-              let numSecondsToNextRefresh = Math.max(currentlyPlayingInfo.nextRefresh - nowInSecs, 3)
-              if (Number.isInteger(numSecondsToNextRefresh) && numSecondsToNextRefresh > 0) {
-                updateTimeoutId = setTimeout(() => update(), numSecondsToNextRefresh * 1000)
-                console.log('next update scheduled in ' + numSecondsToNextRefresh + ' seconds')
-              } else {
-                console.warn('numSecondsToNextRefresh has bad value: ' + numSecondsToNextRefresh)
-              }
-            }
-
-            if (hasSongChanged) {
-              // fetch lyrics
-              console.log('query lyrics for ' + currentlyPlayingInfo.artist + ', ' + currentlyPlayingInfo.song)
-              currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
-              if (currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.success) {
-                console.log('found lyrics')
-              } else {
-                errorMsg = currentlyPlayingInfo.lyricsResult ? currentlyPlayingInfo.lyricsResult.error : ''
-                console.log('could not find lyrics: ' + errorMsg)
-              }
-            } else {
-              console.log('song has not changed')
-            }
-
+          // fetch lyrics
+          console.log('query lyrics for ' + currentlyPlayingInfo.artist + ', ' + currentlyPlayingInfo.song)
+          currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
+          if (currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.success) {
+            console.log('found lyrics')
           } else {
-            console.log('currentlyPlaying is not valid')
+            errorMsg = currentlyPlayingInfo.lyricsResult ? currentlyPlayingInfo.lyricsResult.error : ''
+            console.log('could not find lyrics: ' + errorMsg)
           }
         } else {
-          currentlyPlayingInfo = null
-          msg = "could not find what's on"
+          console.log('song has not changed')
         }
       }
       catch (err) {
@@ -514,8 +516,8 @@
       }
     }
 
-     // https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
-     function uuidv4() {
+    // https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
+    function uuidv4() {
       return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
         (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
       );
@@ -764,7 +766,8 @@
       <div class="miscButtons" data-nosnippet>
 
         <!-- setting font-size, because having different font size as the buttons messes up icon alignment between button and link images -->
-        <a id="spotifyLink" target="_blank" rel="noopener noreferrer" title="current song on Spotify" class="iconBtn" style="font-size: initial;">
+        <a id="spotifyLink" target="_blank" rel="noopener noreferrer" title="current song on Spotify" class="iconBtn"
+          style="font-size: initial;">
           <svg viewBox="0 0 24 24">
             <path
               d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
