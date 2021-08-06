@@ -449,10 +449,10 @@
           // fetch lyrics
           console.log('query lyrics for ' + freshCurrentlyPlayingInfo.artist + ', ' + freshCurrentlyPlayingInfo.song)
           freshCurrentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(freshCurrentlyPlayingInfo.artist, freshCurrentlyPlayingInfo.song)
-          if (freshCurrentlyPlayingInfo.lyricsResult && freshCurrentlyPlayingInfo.lyricsResult.success) {
+          if (freshCurrentlyPlayingInfo?.lyricsResult?.success) {
             console.log('found lyrics')
           } else {
-            errorMsg = freshCurrentlyPlayingInfo.lyricsResult ? freshCurrentlyPlayingInfo.lyricsResult.error : ''
+            errorMsg = freshCurrentlyPlayingInfo?.lyricsResult?.error ?? ''
             console.log('could not find lyrics: ' + errorMsg)
           }
         } else {
@@ -505,7 +505,7 @@
       }
       if (json) {
         // don't use data if stale
-        if (IsFipResponseStale(json)) {
+        if (isFipResponseStale(json)) {
           console.log('detected stale response')
           return null
         }
@@ -523,10 +523,10 @@
       );
     }
 
-    function IsFipResponseStale(json) {
+    function isFipResponseStale(json) {
       let nowInSeconds = Math.round(Date.now() / 1000)
 
-      if (json.data.now && json.data.now.next_refresh) {
+      if (json.data.now?.next_refresh) {
         let isStale = nowInSeconds >= json.data.now.next_refresh
         if (isStale) {
           console.log('IsFipResponseStale: true, next_refresh ' + json.data.now.next_refresh + ', now ' + nowInSeconds)
@@ -606,7 +606,7 @@
 
     function updateSourceLinkInUi() {
       let srcLink = document.getElementById('lyricsSourceLink')
-      if (currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink) {
+      if (currentlyPlayingInfo?.lyricsResult?.lyricsInfo?.lyricsSourceLink) {
         srcLink.style.display = 'block'
         srcLink.href = currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink
       }
@@ -660,23 +660,14 @@
       if (!activeChannel || !currentlyPlayingInfo)
         return ''
 
-      let areLyricsAvailable =
-        currentlyPlayingInfo
-        && currentlyPlayingInfo.lyricsResult
-        && currentlyPlayingInfo.lyricsResult.lyricsInfo
-        && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
-        
-      if (areLyricsAvailable)
-        return currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
-      else
-        // lyrics not found text
-        return '-'
+      let lyrics = currentlyPlayingInfo?.lyricsResult?.lyricsInfo?.lyrics
+      return lyrics ?? '-'
     }
 
     function updateSongInfoUi(currentlyPlayingInfo) {
       let elem = document.getElementById('songInfo')
-      if (currentlyPlayingInfo && currentlyPlayingInfo.isValid) {
 
+      if (currentlyPlayingInfo?.isValid) {
         let { artist, song } = currentlyPlayingInfo
 
         elem.style.display = 'block';
