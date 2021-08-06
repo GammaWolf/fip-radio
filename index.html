@@ -385,6 +385,9 @@
       playingTracker.subscribePlayingChanged(playing => { ui.onPlayingChanged(playing) })
       playingTracker.subscribePlayingChanged(async playing => { updateLyrics(playing) })
       playingTracker.update()
+      
+      // start initially selected channel
+      updatePlayerSrcUrl(activeChannelTracker.activeChannel)
     })
 
     // functions
@@ -621,8 +624,6 @@
       }
     }
   </style>
-
-
 </head>
 
 <body>
