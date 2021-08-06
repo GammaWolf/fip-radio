@@ -250,13 +250,14 @@
 
     class UI {
       theme = new Theme()
+      channels = null
       msg = ''
       lastShownLyricsText = ''
 
       constructor(channels) {
-        console.log("UI CTOR")
         this.channels = channels
         document.addEventListener("DOMContentLoaded", e => { this.onDOMContentLoaded() })
+        window.addEventListener('load', this.onWindowLoad)
       }
 
       onDOMContentLoaded() {
@@ -273,6 +274,14 @@
           let btn = btns[i];
           btn.addEventListener('mouseup', e => { btn.blur(); });
         }
+      }
+
+      onWindowLoad() {
+        console.log("ONWINLOAd")
+        // focus active channel menu item, so tab navigation start point is the selected menu item, blur() to hide visual focus helper
+        let activeChannelLink = document.querySelector('.channelsListElemActive a');
+        activeChannelLink.focus()
+        activeChannelLink.blur()
       }
 
       showMsg(msg) {
@@ -481,7 +490,7 @@
         { name: 'nouveautés', anchor: 'nouveautes', id: 70, listenUrl: baseListenUrl + 'fipnouveautes-hifi.aac', colorAsHsl: { h: 217, s: 84, l: 57 } },
       ]
 
-    let ui = new UI(channels)
+
 
     const autoUpdateIntervalInMs = 6000
 
@@ -493,7 +502,8 @@
     var isDevMode = determineIsDevMode()
 
     // entry/init call
-    window.onload = onWindowLoad
+    window.addEventListener('load', this.onWindowLoad )
+    let ui = new UI(channels)
 
     // types
     function Playing(artist, song) {
@@ -518,11 +528,6 @@
         c = channels[0] // default to main channel
 
       setActiveChannel(c)
-
-      // focus active channel menu item, so tab navigation start point is the selected menu item, blur() to hide visual focus helper
-      activeChannelLink = document.querySelector('.channelsListElemActive a');
-      activeChannelLink.focus()
-      activeChannelLink.blur()
     }
 
     function getActiveChannelFromUrl() {
@@ -543,7 +548,7 @@
     function setActiveChannel(c) {
       if (activeChannel != null && activeChannel.id == c.id) return
 
-      let oldChannel = c
+      let oldChannel = activeChannel
       console.log('setActiveChannel: ' + c.id + ', ' + c.name)
       activeChannel = c
       onActiveChannelChanged(oldChannel, activeChannel)
