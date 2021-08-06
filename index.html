@@ -238,7 +238,7 @@
     var lyricsService = null
     var lastShownLyricsText = ''
     var updateTimeoutId = null
-    var _isDevMode = determineIsDevMode()
+    var isDevMode = determineIsDevMode()
 
     // entry/init call
     document.addEventListener("DOMContentLoaded", onDOMContentLoaded)
@@ -277,7 +277,7 @@
     }
 
     function onWindowLoad() {
-      if (isDevMode()) {
+      if (isDevMode) {
         lyricsService = new LyricsService("http://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect")
       } else {
         lyricsService = new LyricsService()
@@ -489,7 +489,7 @@
       // This issue seems to be on fip server side, could replicate with curl.
       url += '&x=' + uuidv4()
 
-      if (isDevMode()) {
+      if (isDevMode) {
         url = "https://www.fip.fr/" + url
       }
 
@@ -742,10 +742,6 @@
 
     function determineIsDevMode() {
       return window.location.protocol === 'file:'
-    }
-
-    function isDevMode() {
-      return _isDevMode
     }
   </script>
 </head>
