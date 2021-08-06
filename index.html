@@ -476,7 +476,7 @@
       }
     };
 
-    async function fetchPlaying(retryAttemptNo) {
+    async function fetchPlaying() {
       if (!activeChannel)
         return Promise.reject(new Error('no channel active'))
 
