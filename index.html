@@ -212,6 +212,259 @@
 
   <script async src="queryLyrics.js"></script>
   <script>
+
+    class Theme {
+      defaultTheme = 'dark'
+
+      contructor(channels) {
+        document.addEventListener("DOMContentLoaded", this.onDOMContentLoaded)
+      }
+
+      onDOMContentLoaded() {
+        let theme = localStorage.getItem('theme')
+        if (theme === null) {
+          theme = defaultTheme
+        }
+        applyTheme(theme)
+      }
+
+      toggleDarkMode() {
+        let theme = document.documentElement.getAttribute('data-theme')
+        if (theme === null)
+          theme = defaultTheme
+
+        if (theme === 'dark') {
+          theme = 'light'
+        } else {
+          theme = 'dark'
+        }
+        localStorage.setItem('theme', theme)
+
+        applyTheme(theme)
+      }
+
+      applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme)
+      }
+    }
+
+    class UI {
+      theme = new Theme()
+      msg = ''
+      lastShownLyricsText = ''
+
+      constructor(channels) {
+        console.log("UI CTOR")
+        this.channels = channels
+        document.addEventListener("DOMContentLoaded", e => { this.onDOMContentLoaded() })
+      }
+
+      onDOMContentLoaded() {
+        this.createChannelsLinks()
+
+        // set max width of outer container, so when the text (of author, title or lyrics) gets too long, it doesn't mess up the layout)
+        let s = document.querySelectorAll(".channelsMaxWidth")
+        let maxWidth = this.calcChannelsMenuWidth().toFixed(2) + 'px'
+        s.forEach(e => e.style.maxWidth = maxWidth);
+
+        // hide outline of buttons clicked with mouse
+        var btns = document.getElementsByTagName("button")
+        for (let i = 0; i < btns.length; i++) {
+          let btn = btns[i];
+          btn.addEventListener('mouseup', e => { btn.blur(); });
+        }
+      }
+
+      showMsg(msg) {
+        this.msg = msg
+      }
+
+      createChannelsLinks() {
+        let channelsContainer = document.getElementById('channels')
+        channels.forEach(c => {
+          let template = document.getElementById('channelLinkTemplate')
+          let node = template.content.cloneNode(true)
+          let listElem = node.querySelector("div");
+          listElem.setAttribute('id', getChannelElemId(c.id))
+
+          let staleAccentColor = this.makeHslaCssStrFromHsla(c.colorAsHsl.h, c.colorAsHsl.s, c.colorAsHsl.l, 0.2)
+          listElem.style.setProperty('--elem-accent', staleAccentColor)
+          let accentColor = this.makeHslCssStrFromHslColor(c.colorAsHsl)
+          listElem.style.setProperty('--channel-hover-color', accentColor);
+
+          let link = listElem.getElementsByTagName('a')[0]
+          link.href = '#' + c.anchor
+          link.title = c.name
+          link.onclick = () => setActiveChannel(c)
+          link.innerText = c.name
+
+          channelsContainer.appendChild(node)
+        })
+      }
+
+      calcChannelsMenuWidth() {
+        // sum up menu part widths to get whole menu width 
+        let channelsMenuWidth = 0.0
+        let channelsList = document.getElementById('channels')
+        for (let i = 0; i < channelsList.children.length; i++) {
+          channelsMenuWidth += channelsList.children[i].getBoundingClientRect().width
+        }
+        return channelsMenuWidth
+      }
+
+      update() {
+        this.updateSongInfoUi(playing)
+        this.updateLyricsUi(playing, activeChannel)
+        this.updateMsgUi(this.msg)
+      }
+
+      updateMsgUi(mag) {
+        let msgElem = document.getElementById('msg')
+        if (msg != msgElem.innerText)
+          msgElem.innerText = this.msg
+      }
+
+      updateLyricsUi(currentlyPlayingInfo, activeChannel) {
+        let lyricsUiText = this.determineLyricsUiText(currentlyPlayingInfo, activeChannel)
+        if (lyricsUiText != this.lastShownLyricsText) {
+          this.lastShownLyricsText = lyricsUiText
+          this.updateLyricsTextInUi(lyricsUiText)
+        }
+
+        this.updateSourceLinkInUi()
+      }
+
+      determineLyricsUiText(currentlyPlayingInfo, activeChannel) {
+        if (!activeChannel || !currentlyPlayingInfo)
+          return ''
+
+        let lyrics = currentlyPlayingInfo?.lyricsResult?.lyricsInfo?.lyrics
+        return lyrics ?? '-'
+      }
+
+      updateSourceLinkInUi() {
+        let srcLink = document.getElementById('lyricsSourceLink')
+        if (playing?.lyricsResult?.lyricsInfo?.lyricsSourceLink) {
+          srcLink.style.display = 'block'
+          srcLink.href = playing.lyricsResult.lyricsInfo.lyricsSourceLink
+        }
+        else {
+          srcLink.style.display = 'none'
+          document.getElementById('lyricsSourceLink').href = ''
+        }
+      }
+
+      updateLyricsTextInUi(lyricsUiText) {
+        // attempt to use multiple columns 
+        const minNewlinesToUseColumns = 24
+        const newlineRegex = new RegExp('\r?\n', 'g')
+        const matches = Array.from(lyricsUiText.matchAll(newlineRegex))
+
+        let col1Elem = document.getElementById('lyrics-col1')
+        let col2Elem = document.getElementById('lyrics-col2')
+
+        if (matches && matches.length >= minNewlinesToUseColumns) {
+          let m = Math.floor(matches.length / 2)
+          let middleNewlineLength = matches[m][0].length
+          // added newline length because we need to include the newline in the first column (in case of flex wrap)
+          let middleTxtPos = matches[m].index + middleNewlineLength
+          let secondHalf = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
+
+          // prefer to cut off at empty line (prettier because blocks stay together)
+          let emptyLineRegex = new RegExp('(\r?\n){2}')
+          let ma = secondHalf.match(emptyLineRegex)
+          if (ma && ma.index && ma.length > 0) {
+            let isNotTooFarNearTheEnd = ma.index < (secondHalf.length - (secondHalf.length * 0.6))
+            if (isNotTooFarNearTheEnd) {
+              // add to middle pos because we've search only in second half, but want the absolute pos
+              // add double newline length to first part in case the 2nd column is flex-wrapped onto the first. Then we have a newline there as if we had it in one column.
+              middleTxtPos = middleTxtPos + ma.index + ma[0].length
+            }
+          }
+
+          let firstColTxt = lyricsUiText.substring(0, middleTxtPos)
+          let secondColTxt = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
+
+          col1Elem.innerText = firstColTxt
+          col2Elem.innerText = secondColTxt
+        }
+        else { // fallback: use only first column
+          col1Elem.innerText = lyricsUiText
+          col2Elem.innerText = ''
+        }
+      }
+
+      updateSongInfoUi(playing) {
+        let elem = document.getElementById('songInfo')
+
+        if (playing?.isValid) {
+          let { artist, song } = playing
+
+          elem.style.display = 'block';
+
+          // get attribute already decodes stuff
+          let displayedArtist = decodeURIComponent(elem.getAttribute('data-songArtist'))
+          let displayedSong = decodeURIComponent(elem.getAttribute('data-songTitle'))
+
+          let hasSongDataChanged = displayedArtist !== artist && displayedSong !== song
+          if (hasSongDataChanged) {
+            console.log('song data changed, updating')
+            let escapedArtist = encodeURIComponent(artist)
+            let escapedSong = encodeURIComponent(song)
+
+            elem.setAttribute('data-songArtist', escapedArtist)
+            elem.setAttribute('data-songTitle', escapedSong)
+
+            document.getElementById('songArtist').innerText = artist
+            document.getElementById('songTitle').innerText = song
+
+            let searchStr = 'artist:' + artist + ' track:' + song
+            let spotifyLink = 'https://play.spotify.com/search/' + encodeURIComponent(searchStr)
+            document.getElementById('spotifyLink').href = spotifyLink
+          }
+        }
+        else {
+          elem.style.display = 'none';
+          elem.removeAttribute('data-songArtist')
+          elem.removeAttribute('data-songTitle')
+        }
+
+        // only show spotify link if there is current song info
+        document.getElementById('spotifyLink').style.display = elem.style.display
+      }
+
+      // sets style for active channel elem 
+      onActiveChannelChanged(activeChannel) {
+        let channelsList = document.getElementById('channels')
+
+        // clear all selected
+        for (let i = 0; i < channelsList.children.length; i++) {
+          if (channelsList.children[i].classList.contains('channelsListElemActive'))
+            channelsList.children[i].classList.remove('channelsListElemActive')
+        }
+
+        // set active selected
+        let activeChannelElem = document.getElementById(getChannelElemId(activeChannel.id))
+        if (!activeChannelElem.classList.contains('channelsListElemActive'))
+          activeChannelElem.classList.add('channelsListElemActive')
+
+        document.documentElement.style.setProperty('--active-channel-color', this.makeHslCssStrFromHslColor(activeChannel.colorAsHsl));
+      }
+
+      makeHslaCssStrFromHsla(h, s, l, a) {
+        return 'hsl(' + h + ',' + s + '%,' + l + '%,' + a + ')'
+      }
+
+      makeHslCssStrFromHsl(h, s, l) {
+        return 'hsl(' + h + ',' + s + '%,' + l + '%)'
+      }
+
+      makeHslCssStrFromHslColor(c) {
+        return this.makeHslCssStrFromHsl(c.h, c.s, c.l)
+      }
+
+    }
+
     // consts, global data
     var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
     const baseListenUrl = 'https://icecast.radiofrance.fr/'
@@ -228,20 +481,18 @@
         { name: 'nouveautés', anchor: 'nouveautes', id: 70, listenUrl: baseListenUrl + 'fipnouveautes-hifi.aac', colorAsHsl: { h: 217, s: 84, l: 57 } },
       ]
 
+    let ui = new UI(channels)
+
     const autoUpdateIntervalInMs = 6000
-    const defaultTheme = 'dark'
 
     // state
-    var msg = ''
     var playing = null
     var activeChannel = null
     var lyricsService = null
-    var lastShownLyricsText = ''
     var updateTimeoutId = null
     var isDevMode = determineIsDevMode()
 
     // entry/init call
-    document.addEventListener("DOMContentLoaded", onDOMContentLoaded)
     window.onload = onWindowLoad
 
     // types
@@ -255,27 +506,6 @@
     }
 
     // functions
-    function onDOMContentLoaded() {
-      let theme = localStorage.getItem('theme')
-      if (theme === null) {
-        theme = defaultTheme
-      }
-      applyTheme(theme)
-      createChannelsLinks()
-
-      // set max width of outer container, so when the text (of author, title or lyrics) gets too long, it doesn't mess up the layout)
-      let s = document.querySelectorAll(".channelsMaxWidth")
-      let maxWidth = calcChannelsMenuWidth().toFixed(2) + 'px'
-      s.forEach(e => e.style.maxWidth = maxWidth);
-
-      // hide outline of buttons clicked with mouse
-      var btns = document.getElementsByTagName("button")
-      for (i = 0; i < btns.length; i++) {
-        let btn = btns[i];
-        btn.addEventListener('mouseup', e => { btn.blur(); });
-      }
-    }
-
     function onWindowLoad() {
       if (isDevMode) {
         lyricsService = new LyricsService("http://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect")
@@ -295,16 +525,6 @@
       activeChannelLink.blur()
     }
 
-    function calcChannelsMenuWidth() {
-      // sum up menu part widths to get whole menu width 
-      let channelsMenuWidth = 0.0
-      let channelsList = document.getElementById('channels')
-      for (i = 0; i < channelsList.children.length; i++) {
-        channelsMenuWidth += channelsList.children[i].getBoundingClientRect().width
-      }
-      return channelsMenuWidth
-    }
-
     function getActiveChannelFromUrl() {
       // anchor name comes after a hash, for example id 'rock' is extracted from this url www.url.com/foo#rock
       let anchor = location.hash.substr(1)
@@ -314,41 +534,6 @@
           return found
       }
       return null
-    }
-
-    function createChannelsLinks() {
-      let channelsContainer = document.getElementById('channels')
-      channels.forEach(c => {
-        let template = document.getElementById('channelLinkTemplate')
-        let node = template.content.cloneNode(true)
-        let listElem = node.querySelector("div");
-        listElem.setAttribute('id', getChannelElemId(c.id))
-
-        let staleAccentColor = makeHslaCssStrFromHsla(c.colorAsHsl.h, c.colorAsHsl.s, c.colorAsHsl.l, 0.2)
-        listElem.style.setProperty('--elem-accent', staleAccentColor)
-        let accentColor = makeHslCssStrFromHslColor(c.colorAsHsl)
-        listElem.style.setProperty('--channel-hover-color', accentColor);
-
-        let link = listElem.getElementsByTagName('a')[0]
-        link.href = '#' + c.anchor
-        link.title = c.name
-        link.onclick = () => setActiveChannel(c)
-        link.innerText = c.name
-
-        channelsContainer.appendChild(node)
-      })
-    }
-
-    function makeHslaCssStrFromHsla(h, s, l, a) {
-      return 'hsl(' + h + ',' + s + '%,' + l + '%,' + a + ')'
-    }
-
-    function makeHslCssStrFromHsl(h, s, l) {
-      return 'hsl(' + h + ',' + s + '%,' + l + '%)'
-    }
-
-    function makeHslCssStrFromHslColor(c) {
-      return makeHslCssStrFromHsl(c.h, c.s, c.l)
     }
 
     function getChannelElemId(channelId) {
@@ -365,9 +550,9 @@
     }
 
     function onActiveChannelChanged(oldChannel, newChannel) {
-      updateChannelsUi(activeChannel)
+      ui.onActiveChannelChanged(newChannel)
       update()
-      updatePlayerSrcUrl(activeChannel)
+      updatePlayerSrcUrl(newChannel)
     }
 
     function updatePlayerSrcUrl(channel) {
@@ -379,24 +564,6 @@
       player.setAttribute('src', url)
     }
 
-    // sets style for active channel elem 
-    function updateChannelsUi(activeChannel) {
-      let channelsList = document.getElementById('channels')
-
-      // clear all selected
-      for (i = 0; i < channelsList.children.length; i++) {
-        if (channelsList.children[i].classList.contains('channelsListElemActive'))
-          channelsList.children[i].classList.remove('channelsListElemActive')
-      }
-
-      // set active selected
-      let activeChannelElem = document.getElementById(getChannelElemId(activeChannel.id))
-      if (!activeChannelElem.classList.contains('channelsListElemActive'))
-        activeChannelElem.classList.add('channelsListElemActive')
-
-      document.documentElement.style.setProperty('--active-channel-color', makeHslCssStrFromHslColor(activeChannel.colorAsHsl));
-    }
-
     async function update() {
       try {
         // clear any timeout that might still be active
@@ -404,12 +571,12 @@
         updateTimeoutId = null
 
         if (!activeChannel) {
-          msg = "Please select a channel!"
+          ui.showMsg("Please select a channel!")
           return
         }
 
         console.log('update ' + activeChannel.id)
-        msg = ''
+        ui.showMsg('')
 
         // fetch song
         let previousPlaying = playing
@@ -417,7 +584,7 @@
 
         if (!freshPlaying) {
           playing = null
-          msg = "could not find what's on"
+          ui.showMsg("could not find what's on")
           return
         }
 
@@ -448,7 +615,7 @@
         console.log('hasSongChanged ' + hasSongChanged)
         if (hasSongChanged) {
           playing = freshPlaying
-          updateUi() // update ui before async lyrics query
+          ui.update() // update ui before async lyrics query
 
           // fetch lyrics
           console.log('query lyrics for ' + freshPlaying.artist + ', ' + freshPlaying.song)
@@ -465,14 +632,14 @@
       }
       catch (err) {
         console.log(err.message)
-        msg = 'error: ' + err.message
+        ui.showMsg('error: ' + err.message)
       }
       finally {
         if (updateTimeoutId === null) {
           updateTimeoutId = setTimeout(() => update(), autoUpdateIntervalInMs)
           console.log('next update scheduled in finally in ' + autoUpdateIntervalInMs / 1000 + ' seconds')
         }
-        updateUi()
+        ui.update()
       }
     };
 
@@ -541,12 +708,6 @@
       }
     }
 
-    function updateUi() {
-      updateSongInfoUi(playing)
-      updateLyricsUi(playing, activeChannel)
-      updateMsgUi(msg)
-    }
-
     function playingFromJson(json) {
       try {
         let songInfo = json.data.now.song
@@ -596,140 +757,6 @@
         console.log('err getting currently playing', err)
       }
       return null; // not found
-    }
-
-    function updateMsgUi(mag) {
-      let msgElem = document.getElementById('msg')
-      if (msg != msgElem.innerText)
-        msgElem.innerText = msg
-    }
-
-    function updateLyricsUi(currentlyPlayingInfo, activeChannel) {
-      let lyricsUiText = determineLyricsUiText(currentlyPlayingInfo, activeChannel)
-      if (lyricsUiText != lastShownLyricsText) {
-        lastShownLyricsText = lyricsUiText
-        updateLyricsTextInUi(lyricsUiText)
-      }
-
-      updateSourceLinkInUi()
-    }
-
-    function updateSourceLinkInUi() {
-      let srcLink = document.getElementById('lyricsSourceLink')
-      if (playing?.lyricsResult?.lyricsInfo?.lyricsSourceLink) {
-        srcLink.style.display = 'block'
-        srcLink.href = playing.lyricsResult.lyricsInfo.lyricsSourceLink
-      }
-      else {
-        srcLink.style.display = 'none'
-        document.getElementById('lyricsSourceLink').href = ''
-      }
-    }
-
-    function updateLyricsTextInUi(lyricsUiText) {
-      // attempt to use multiple columns 
-      const minNewlinesToUseColumns = 24
-      const newlineRegex = new RegExp('\r?\n', 'g')
-      const matches = Array.from(lyricsUiText.matchAll(newlineRegex))
-
-      let col1Elem = document.getElementById('lyrics-col1')
-      let col2Elem = document.getElementById('lyrics-col2')
-
-      if (matches && matches.length >= minNewlinesToUseColumns) {
-        let m = Math.floor(matches.length / 2)
-        let middleNewlineLength = matches[m][0].length
-        // added newline length because we need to include the newline in the first column (in case of flex wrap)
-        let middleTxtPos = matches[m].index + middleNewlineLength
-        let secondHalf = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
-
-        // prefer to cut off at empty line (prettier because blocks stay together)
-        let emptyLineRegex = new RegExp('(\r?\n){2}')
-        let ma = secondHalf.match(emptyLineRegex)
-        if (ma && ma.index && ma.length > 0) {
-          let isNotTooFarNearTheEnd = ma.index < (secondHalf.length - (secondHalf.length * 0.6))
-          if (isNotTooFarNearTheEnd) {
-            // add to middle pos because we've search only in second half, but want the absolute pos
-            // add double newline length to first part in case the 2nd column is flex-wrapped onto the first. Then we have a newline there as if we had it in one column.
-            middleTxtPos = middleTxtPos + ma.index + ma[0].length
-          }
-        }
-
-        let firstColTxt = lyricsUiText.substring(0, middleTxtPos)
-        let secondColTxt = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
-
-        col1Elem.innerText = firstColTxt
-        col2Elem.innerText = secondColTxt
-      }
-      else { // fallback: use only first column
-        col1Elem.innerText = lyricsUiText
-        col2Elem.innerText = ''
-      }
-    }
-
-    function determineLyricsUiText(currentlyPlayingInfo, activeChannel) {
-      if (!activeChannel || !currentlyPlayingInfo)
-        return ''
-
-      let lyrics = currentlyPlayingInfo?.lyricsResult?.lyricsInfo?.lyrics
-      return lyrics ?? '-'
-    }
-
-    function updateSongInfoUi(playing) {
-      let elem = document.getElementById('songInfo')
-
-      if (playing?.isValid) {
-        let { artist, song } = playing
-
-        elem.style.display = 'block';
-
-        // get attribute already decodes stuff
-        let displayedArtist = decodeURIComponent(elem.getAttribute('data-songArtist'))
-        let displayedSong = decodeURIComponent(elem.getAttribute('data-songTitle'))
-
-        let hasSongDataChanged = displayedArtist !== artist && displayedSong !== song
-        if (hasSongDataChanged) {
-          console.log('song data changed, updating')
-          let escapedArtist = encodeURIComponent(artist)
-          let escapedSong = encodeURIComponent(song)
-
-          elem.setAttribute('data-songArtist', escapedArtist)
-          elem.setAttribute('data-songTitle', escapedSong)
-
-          document.getElementById('songArtist').innerText = artist
-          document.getElementById('songTitle').innerText = song
-
-          let searchStr = 'artist:' + artist + ' track:' + song
-          let spotifyLink = 'https://play.spotify.com/search/' + encodeURIComponent(searchStr)
-          document.getElementById('spotifyLink').href = spotifyLink
-        }
-      }
-      else {
-        elem.style.display = 'none';
-        elem.removeAttribute('data-songArtist')
-        elem.removeAttribute('data-songTitle')
-      }
-
-      // only show spotify link if there is current song info
-      document.getElementById('spotifyLink').style.display = elem.style.display
-    }
-
-    function toggleDarkMode() {
-      let theme = document.documentElement.getAttribute('data-theme')
-      if (theme === null)
-        theme = defaultTheme
-
-      if (theme === 'dark') {
-        theme = 'light'
-      } else {
-        theme = 'dark'
-      }
-      localStorage.setItem('theme', theme)
-
-      applyTheme(theme)
-    }
-
-    function applyTheme(theme) {
-      document.documentElement.setAttribute('data-theme', theme)
     }
 
     function contact() {
