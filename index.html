@@ -440,7 +440,11 @@
           }
         }
 
-        let hasSongChanged = !previousPlayingInfo || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
+        let hasSongChanged =
+          !previousPlayingInfo
+          || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist
+          || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
+
         console.log('hasSongChanged ' + hasSongChanged)
         if (hasSongChanged) {
           currentlyPlayingInfo = freshCurrentlyPlayingInfo
@@ -561,12 +565,19 @@
           interpreters = songInfo.interpreters ? songInfo.interpreters.join(', ') : null
           songTitle = songInfo.title
         } else {
+          console.log("response's songInfo is null")
           // sometimes json.data.now.song is null. but the next song in the json is already playing -> use that
           let nextTracks = json.data.nextTracks
           if (nextTracks && nextTracks.length > 0) {
             nextTrackStartTime = nextTracks[0].start_time
             // has next track started playing already
             if (serverTime >= nextTrackStartTime) {
+              // only if song could reasonably still be playing
+              const MAX_SONG_LENGTH_SEC = 60 * 10
+              if (serverTime > nextTrackStartTime + MAX_SONG_LENGTH_SEC) {
+                console.log("not using response's nextTracks because it's stale")
+                return null
+              }
               console.log('using data from json nextTitles')
               interpreters = nextTracks[0].title
               songTitle = nextTracks[0].subtitle
