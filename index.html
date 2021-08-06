@@ -254,11 +254,13 @@
       msg = ''
       lastShownLyricsText = ''
       playing = null
+      activeChannelTracker = null
 
-      constructor(channels) {
+      constructor(channels, activeChannelTracker) {
         this.channels = channels
+        this.activeChannelTracker = activeChannelTracker
+        activeChannelTracker.subscribe(c => this.onActiveChannelChanged(c))
         document.addEventListener("DOMContentLoaded", e => { this.onDOMContentLoaded() })
-        window.addEventListener('load', this.onWindowLoad)
       }
 
       onDOMContentLoaded() {
@@ -277,10 +279,10 @@
         }
       }
 
-      onWindowLoad() {
-        // focus active channel menu item, so tab navigation start point is the selected menu item, blur() to hide visual focus helper
+      focusActiveChannel() {
         let activeChannelLink = document.querySelector('.channelsListElemActive a');
         activeChannelLink.focus()
+        // blur() to hide visual focus helper
         activeChannelLink.blur()
       }
 
@@ -298,6 +300,7 @@
       }
 
       onLyricsFound(playing) {
+        console.log('found lyrics')
         if (playing !== this.playing) {
           console.log("### currently playing changed while lyrics was being fetched")
           return
@@ -326,7 +329,7 @@
           let link = listElem.getElementsByTagName('a')[0]
           link.href = '#' + c.anchor
           link.title = c.name
-          link.onclick = () => setActiveChannel(c)
+          link.onclick = () => activeChannelTracker.setActiveChannel(c)
           link.innerText = c.name
 
           channelsContainer.appendChild(node)
@@ -466,6 +469,7 @@
 
       // sets style for active channel elem 
       onActiveChannelChanged(activeChannel) {
+        console.log("UI::activeChannel" + activeChannel)
         let channelsList = document.getElementById('channels')
 
         // clear all selected
@@ -480,6 +484,9 @@
           activeChannelElem.classList.add('channelsListElemActive')
 
         document.documentElement.style.setProperty('--active-channel-color', this.makeHslCssStrFromHslColor(activeChannel.colorAsHsl));
+
+        // focus active channel menu item, so tab navigation start point is the selected menu item (when coming from URL)
+        this.focusActiveChannel()
       }
 
       makeHslaCssStrFromHsla(h, s, l, a) {
@@ -502,6 +509,11 @@
       playing = null
       updateTimeoutId = null
       observers = []
+      activeChannelTracker = null
+
+      constructor(activeChannelTracker) {
+        this.activeChannelTracker = activeChannelTracker 
+      }
 
       subscribePlayingChanged(observer) {
         this.observers.push(observer)
@@ -521,11 +533,11 @@
           clearTimeout(updateTimeoutId)
           updateTimeoutId = null
 
-          if (!activeChannel) {
+          if (!activeChannelTracker.activeChannel) {
             return
           }
 
-          console.log('update ' + activeChannel.id)
+          console.log('update ' + activeChannelTracker.activeChannel.id)
 
           // fetch song
           let previousPlaying = this.playing
@@ -576,11 +588,11 @@
       }
 
       async fetchPlaying() {
-        if (!activeChannel)
+        if (!activeChannelTracker.activeChannel)
           return Promise.reject(new Error('no channel active'))
 
         console.log('fetching currently playing')
-        let url = "latest/api/graphql?operationName=Now&variables=%7B%22stationId%22:" + activeChannel.id + ",%22previousTrackLimit%22:1%7D&extensions=%7B%22persistedQuery%22:%7B%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22%7D%7D"
+        let url = "latest/api/graphql?operationName=Now&variables=%7B%22stationId%22:" + activeChannelTracker.activeChannel.id + ",%22previousTrackLimit%22:1%7D&extensions=%7B%22persistedQuery%22:%7B%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22%7D%7D"
 
         // Add new random guid for each rq to prevent getting stale/cached results.
         // Had cases where it responded with over 10 minutes old data, where Date.now() has way passed next_refresh.
@@ -693,6 +705,50 @@
 
     }
 
+    class ActiveChannelTracker {
+      channels = null
+      activeChannel = null
+      onActiveChannelChangedObservers = []
+
+      constructor(channels) {
+        this.channels = channels
+        // activeChannel = channels[0]
+        window.addEventListener('load', () => this.onWindowLoad())
+      }
+
+      onWindowLoad() {
+        let c = this.getActiveChannelFromUrl()
+        if (!c)
+          c = this.channels[0] // default to main channel
+  
+        this.setActiveChannel(c)
+      }
+
+      subscribe(o) {
+        this.onActiveChannelChangedObservers.push(o)
+      }
+
+      getActiveChannelFromUrl() {
+        // anchor name comes after a hash, for example id 'rock' is extracted from this url www.url.com/foo#rock
+        let anchor = location.hash.substr(1)
+        if (anchor) {
+          let found = this.channels.find(c => c.anchor === anchor)
+          if (found)
+            return found
+        }
+        return null
+      }
+
+      setActiveChannel(c) {
+        if (activeChannel != null && activeChannel.id == c.id) return
+
+        let oldChannel = activeChannel
+        console.log('setActiveChannel: ' + c.id + ', ' + c.name)
+        this.activeChannel = c
+        this.onActiveChannelChangedObservers.forEach(o => o(c))
+      }
+    }
+
     // consts, global data
     var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
     const baseListenUrl = 'https://icecast.radiofrance.fr/'
@@ -716,9 +772,16 @@
     var isDevMode = determineIsDevMode()
 
     // entry/init call
-    window.addEventListener('load', this.onWindowLoad )
-    let ui = new UI(channels)
-    let playingTracker = new PlayingTracker()
+    window.addEventListener('load', this.onWindowLoad)
+
+    let activeChannelTracker = new ActiveChannelTracker(channels)
+    activeChannelTracker.subscribe(c => {
+      updatePlayerSrcUrl(c)
+      playingTracker.update()
+    })
+
+    let ui = new UI(channels, activeChannelTracker)
+    let playingTracker = new PlayingTracker(activeChannelTracker)
     playingTracker.subscribePlayingChanged(playing => { ui.onPlayingChanged(playing) })
     playingTracker.subscribePlayingChanged(async playing => {
           if (!playing)
@@ -728,7 +791,6 @@
           console.log('query lyrics for ' + playing.artist + ', ' + playing.song)
           playing.lyricsResult = await lyricsService.queryLyrics(playing.artist, playing.song)
           if (playing?.lyricsResult?.success) {
-            console.log('found lyrics')
             ui.onLyricsFound(playing)
           } else {
             errorMsg = playing?.lyricsResult?.error ?? ''
@@ -753,42 +815,10 @@
       } else {
         lyricsService = new LyricsService()
       }
-
-      let c = getActiveChannelFromUrl()
-      if (!c)
-        c = channels[0] // default to main channel
-
-      setActiveChannel(c)
-    }
-
-    function getActiveChannelFromUrl() {
-      // anchor name comes after a hash, for example id 'rock' is extracted from this url www.url.com/foo#rock
-      let anchor = location.hash.substr(1)
-      if (anchor) {
-        let found = channels.find(c => c.anchor === anchor)
-        if (found)
-          return found
-      }
-      return null
     }
 
     function getChannelElemId(channelId) {
       return 'channelElem' + channelId
-    }
-
-    function setActiveChannel(c) {
-      if (activeChannel != null && activeChannel.id == c.id) return
-
-      let oldChannel = activeChannel
-      console.log('setActiveChannel: ' + c.id + ', ' + c.name)
-      activeChannel = c
-      onActiveChannelChanged(oldChannel, activeChannel)
-    }
-
-    function onActiveChannelChanged(oldChannel, newChannel) {
-      ui.onActiveChannelChanged(newChannel)
-      playingTracker.update()
-      updatePlayerSrcUrl(newChannel)
     }
 
     function updatePlayerSrcUrl(channel) {
