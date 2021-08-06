@@ -447,12 +447,12 @@
           updateUi() // update ui before async lyrics query
 
           // fetch lyrics
-          console.log('query lyrics for ' + currentlyPlayingInfo.artist + ', ' + currentlyPlayingInfo.song)
-          currentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(currentlyPlayingInfo.artist, currentlyPlayingInfo.song)
-          if (currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.success) {
+          console.log('query lyrics for ' + freshCurrentlyPlayingInfo.artist + ', ' + freshCurrentlyPlayingInfo.song)
+          freshCurrentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(freshCurrentlyPlayingInfo.artist, freshCurrentlyPlayingInfo.song)
+          if (freshCurrentlyPlayingInfo.lyricsResult && freshCurrentlyPlayingInfo.lyricsResult.success) {
             console.log('found lyrics')
           } else {
-            errorMsg = currentlyPlayingInfo.lyricsResult ? currentlyPlayingInfo.lyricsResult.error : ''
+            errorMsg = freshCurrentlyPlayingInfo.lyricsResult ? freshCurrentlyPlayingInfo.lyricsResult.error : ''
             console.log('could not find lyrics: ' + errorMsg)
           }
         } else {
@@ -660,7 +660,12 @@
       if (!activeChannel || !currentlyPlayingInfo)
         return ''
 
-      let areLyricsAvailable = currentlyPlayingInfo && currentlyPlayingInfo.lyricsResult && currentlyPlayingInfo.lyricsResult.lyricsInfo && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
+      let areLyricsAvailable =
+        currentlyPlayingInfo
+        && currentlyPlayingInfo.lyricsResult
+        && currentlyPlayingInfo.lyricsResult.lyricsInfo
+        && currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
+        
       if (areLyricsAvailable)
         return currentlyPlayingInfo.lyricsResult.lyricsInfo.lyrics
       else
