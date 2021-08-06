@@ -9,6 +9,7 @@
   <link rel="icon"
     href="data:image/svg+xml;,%0A%3Csvg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 0 24 24' width='24'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/%3E%3C/svg%3E">
   <title>Fip Radio Lyrics</title>
+
   <style>
     :root {
       --bg-color: #fdfdfa;
@@ -210,610 +211,396 @@
     }
   </style>
 
-  <script async src="queryLyrics.js"></script>
-  <script>
+<script async src="queryLyrics.js"></script>
+<script async src="fipPlayingSongTracker.js"></script>
+<script>
+  class Theme {
+    defaultTheme = 'dark'
 
-    class Theme {
-      defaultTheme = 'dark'
-
-      contructor(channels) {
-        document.addEventListener("DOMContentLoaded", this.onDOMContentLoaded)
-      }
-
-      onDOMContentLoaded() {
-        let theme = localStorage.getItem('theme')
-        if (theme === null) {
-          theme = defaultTheme
-        }
-        applyTheme(theme)
-      }
-
-      toggleDarkMode() {
-        let theme = document.documentElement.getAttribute('data-theme')
-        if (theme === null)
-          theme = defaultTheme
-
-        if (theme === 'dark') {
-          theme = 'light'
-        } else {
-          theme = 'dark'
-        }
-        localStorage.setItem('theme', theme)
-
-        applyTheme(theme)
-      }
-
-      applyTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme)
-      }
+    constructor() {
+      document.addEventListener("DOMContentLoaded", e => { this.onDOMContentLoaded() })
     }
 
-    class UI {
-      theme = new Theme()
-      channels = null
-      msg = ''
-      lastShownLyricsText = ''
-      playing = null
-      activeChannelTracker = null
-
-      constructor(channels, activeChannelTracker) {
-        this.channels = channels
-        this.activeChannelTracker = activeChannelTracker
-        activeChannelTracker.subscribe(c => this.onActiveChannelChanged(c))
-        document.addEventListener("DOMContentLoaded", e => { this.onDOMContentLoaded() })
-      }
-
-      onDOMContentLoaded() {
-        this.createChannelsLinks()
-
-        // set max width of outer container, so when the text (of author, title or lyrics) gets too long, it doesn't mess up the layout)
-        let s = document.querySelectorAll(".channelsMaxWidth")
-        let maxWidth = this.calcChannelsMenuWidth().toFixed(2) + 'px'
-        s.forEach(e => e.style.maxWidth = maxWidth);
-
-        // hide outline of buttons clicked with mouse
-        var btns = document.getElementsByTagName("button")
-        for (let i = 0; i < btns.length; i++) {
-          let btn = btns[i];
-          btn.addEventListener('mouseup', e => { btn.blur(); });
-        }
-      }
-
-      focusActiveChannel() {
-        let activeChannelLink = document.querySelector('.channelsListElemActive a');
-        activeChannelLink.focus()
-        // blur() to hide visual focus helper
-        activeChannelLink.blur()
-      }
-
-      onPlayingChanged(playing) {
-        // remember playing so we can check if it's still the same 'playing' when lyrics arrive
-        this.playing = playing
-
-        if (!playing) {
-          this.setMsg("could not find what's playing")
-          return
-        }
-
-        this.setMsg('')
-        this.update(playing)
-      }
-
-      onLyricsFound(playing) {
-        console.log('found lyrics')
-        if (playing !== this.playing) {
-          console.log("### currently playing changed while lyrics was being fetched")
-          return
-        }
-
-        this.updateLyricsUi(this.playing)
-      }
-
-      setMsg(msg) {
-        this.msg = msg
-      }
-
-      createChannelsLinks() {
-        let channelsContainer = document.getElementById('channels')
-        channels.forEach(c => {
-          let template = document.getElementById('channelLinkTemplate')
-          let node = template.content.cloneNode(true)
-          let listElem = node.querySelector("div");
-          listElem.setAttribute('id', getChannelElemId(c.id))
-
-          let staleAccentColor = this.makeHslaCssStrFromHsla(c.colorAsHsl.h, c.colorAsHsl.s, c.colorAsHsl.l, 0.2)
-          listElem.style.setProperty('--elem-accent', staleAccentColor)
-          let accentColor = this.makeHslCssStrFromHslColor(c.colorAsHsl)
-          listElem.style.setProperty('--channel-hover-color', accentColor);
-
-          let link = listElem.getElementsByTagName('a')[0]
-          link.href = '#' + c.anchor
-          link.title = c.name
-          link.onclick = () => activeChannelTracker.setActiveChannel(c)
-          link.innerText = c.name
-
-          channelsContainer.appendChild(node)
-        })
-      }
-
-      calcChannelsMenuWidth() {
-        // sum up menu part widths to get whole menu width 
-        let channelsMenuWidth = 0.0
-        let channelsList = document.getElementById('channels')
-        for (let i = 0; i < channelsList.children.length; i++) {
-          channelsMenuWidth += channelsList.children[i].getBoundingClientRect().width
-        }
-        return channelsMenuWidth
-      }
-
-      update(playing) {
-        this.updateSongInfoUi(playing)
-        this.updateLyricsUi(playing)
-        this.updateMsgUi(this.msg)
-      }
-
-      updateMsgUi(msg) {
-        let msgElem = document.getElementById('msg')
-        if (msg != msgElem.innerText)
-          msgElem.innerText = msg
-      }
-
-      updateLyricsUi(playing) {
-        let lyricsUiText = this.determineLyricsUiText(playing)
-        if (lyricsUiText != this.lastShownLyricsText) {
-          this.lastShownLyricsText = lyricsUiText
-          this.updateLyricsTextInUi(lyricsUiText)
-        }
-
-        this.updateSourceLinkInUi(playing)
-      }
-
-      determineLyricsUiText(playing) {
-        if (!playing)
-          return ''
-
-        let lyrics = playing?.lyricsResult?.lyricsInfo?.lyrics
-        return lyrics ?? '-'
-      }
-
-      updateSourceLinkInUi(playing) {
-        let srcLink = document.getElementById('lyricsSourceLink')
-        if (playing?.lyricsResult?.lyricsInfo?.lyricsSourceLink) {
-          srcLink.style.display = 'block'
-          srcLink.href = playing.lyricsResult.lyricsInfo.lyricsSourceLink
-        }
-        else {
-          srcLink.style.display = 'none'
-          document.getElementById('lyricsSourceLink').href = ''
-        }
-      }
-
-      updateLyricsTextInUi(lyricsUiText) {
-        // attempt to use multiple columns 
-        const minNewlinesToUseColumns = 24
-        const newlineRegex = new RegExp('\r?\n', 'g')
-        const matches = Array.from(lyricsUiText.matchAll(newlineRegex))
-
-        let col1Elem = document.getElementById('lyrics-col1')
-        let col2Elem = document.getElementById('lyrics-col2')
-
-        if (matches && matches.length >= minNewlinesToUseColumns) {
-          let m = Math.floor(matches.length / 2)
-          let middleNewlineLength = matches[m][0].length
-          // added newline length because we need to include the newline in the first column (in case of flex wrap)
-          let middleTxtPos = matches[m].index + middleNewlineLength
-          let secondHalf = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
-
-          // prefer to cut off at empty line (prettier because blocks stay together)
-          let emptyLineRegex = new RegExp('(\r?\n){2}')
-          let ma = secondHalf.match(emptyLineRegex)
-          if (ma && ma.index && ma.length > 0) {
-            let isNotTooFarNearTheEnd = ma.index < (secondHalf.length - (secondHalf.length * 0.6))
-            if (isNotTooFarNearTheEnd) {
-              // add to middle pos because we've search only in second half, but want the absolute pos
-              // add double newline length to first part in case the 2nd column is flex-wrapped onto the first. Then we have a newline there as if we had it in one column.
-              middleTxtPos = middleTxtPos + ma.index + ma[0].length
-            }
-          }
-
-          let firstColTxt = lyricsUiText.substring(0, middleTxtPos)
-          let secondColTxt = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
-
-          col1Elem.innerText = firstColTxt
-          col2Elem.innerText = secondColTxt
-        }
-        else { // fallback: use only first column
-          col1Elem.innerText = lyricsUiText
-          col2Elem.innerText = ''
-        }
-      }
-
-      updateSongInfoUi(playing) {
-        let elem = document.getElementById('songInfo')
-
-        if (playing?.isValid) {
-          let { artist, song } = playing
-
-          elem.style.display = 'block';
-
-          // get attribute already decodes stuff
-          let displayedArtist = decodeURIComponent(elem.getAttribute('data-songArtist'))
-          let displayedSong = decodeURIComponent(elem.getAttribute('data-songTitle'))
-
-          let hasSongDataChanged = displayedArtist !== artist && displayedSong !== song
-          if (hasSongDataChanged) {
-            console.log('song data changed, updating')
-            let escapedArtist = encodeURIComponent(artist)
-            let escapedSong = encodeURIComponent(song)
-
-            elem.setAttribute('data-songArtist', escapedArtist)
-            elem.setAttribute('data-songTitle', escapedSong)
-
-            document.getElementById('songArtist').innerText = artist
-            document.getElementById('songTitle').innerText = song
-
-            let searchStr = 'artist:' + artist + ' track:' + song
-            let spotifyLink = 'https://play.spotify.com/search/' + encodeURIComponent(searchStr)
-            document.getElementById('spotifyLink').href = spotifyLink
-          }
-        }
-        else {
-          elem.style.display = 'none';
-          elem.removeAttribute('data-songArtist')
-          elem.removeAttribute('data-songTitle')
-        }
-
-        // only show spotify link if there is current song info
-        document.getElementById('spotifyLink').style.display = elem.style.display
-      }
-
-      // sets style for active channel elem 
-      onActiveChannelChanged(activeChannel) {
-        console.log("UI::activeChannel" + activeChannel)
-        let channelsList = document.getElementById('channels')
-
-        // clear all selected
-        for (let i = 0; i < channelsList.children.length; i++) {
-          if (channelsList.children[i].classList.contains('channelsListElemActive'))
-            channelsList.children[i].classList.remove('channelsListElemActive')
-        }
-
-        // set active selected
-        let activeChannelElem = document.getElementById(getChannelElemId(activeChannel.id))
-        if (!activeChannelElem.classList.contains('channelsListElemActive'))
-          activeChannelElem.classList.add('channelsListElemActive')
-
-        document.documentElement.style.setProperty('--active-channel-color', this.makeHslCssStrFromHslColor(activeChannel.colorAsHsl));
-
-        // focus active channel menu item, so tab navigation start point is the selected menu item (when coming from URL)
-        this.focusActiveChannel()
-      }
-
-      makeHslaCssStrFromHsla(h, s, l, a) {
-        return 'hsl(' + h + ',' + s + '%,' + l + '%,' + a + ')'
-      }
-
-      makeHslCssStrFromHsl(h, s, l) {
-        return 'hsl(' + h + ',' + s + '%,' + l + '%)'
-      }
-
-      makeHslCssStrFromHslColor(c) {
-        return this.makeHslCssStrFromHsl(c.h, c.s, c.l)
-      }
-
-    }
-
-    // notifies subscribers of changes to the currently playing song
-    class PlayingTracker {
-      autoUpdateIntervalInMs = 6000
-      playing = null
-      updateTimeoutId = null
-      observers = []
-      activeChannelTracker = null
-
-      constructor(activeChannelTracker) {
-        this.activeChannelTracker = activeChannelTracker 
-      }
-
-      subscribePlayingChanged(observer) {
-        this.observers.push(observer)
-      }
-
-      setPlaying(playing) {
-        if (this.playing === playing)
-          return
-
-        this.playing = playing
-        this.observers.forEach(o => o(playing))
-      }
-
-      async update() {
-        try {
-          // clear any timeout that might still be active
-          clearTimeout(updateTimeoutId)
-          updateTimeoutId = null
-
-          if (!activeChannelTracker.activeChannel) {
-            return
-          }
-
-          console.log('update ' + activeChannelTracker.activeChannel.id)
-
-          // fetch song
-          let previousPlaying = this.playing
-          let freshPlaying = await this.fetchPlaying()
-
-          if (!freshPlaying) {
-            this.setPlaying(null)
-            return
-          }
-
-          if (!freshPlaying.isValid) {
-            console.log('currentlyPlaying is not valid')
-            return
-          }
-
-          let nowInSecs = Math.round(Date.now() / 1000)
-          console.log('times: ' + JSON.stringify({ nowInSecs: nowInSecs, serverTime: freshPlaying.serverTime, nextRefresh: freshPlaying.nextRefresh }))
-
-          // schedule next update
-          if (freshPlaying.serverTime && freshPlaying.nextRefresh) {
-            let numSecondsToNextRefresh = Math.max(freshPlaying.nextRefresh - nowInSecs, 3)
-            if (Number.isInteger(numSecondsToNextRefresh) && numSecondsToNextRefresh > 0) {
-              updateTimeoutId = setTimeout(() => this.update(), numSecondsToNextRefresh * 1000)
-              console.log('next update scheduled in ' + numSecondsToNextRefresh + ' seconds')
-            } else {
-              console.warn('numSecondsToNextRefresh has bad value: ' + numSecondsToNextRefresh)
-            }
-          }
-
-          let hasSongChanged =
-            !previousPlaying
-            || previousPlaying.artist !== freshPlaying.artist
-            || previousPlaying.song !== freshPlaying.song
-
-          console.log('hasSongChanged ' + hasSongChanged)
-          if (hasSongChanged) {
-            this.setPlaying(freshPlaying)
-          }
-          else {
-            console.log('song has not changed')
-          }
-        } finally {
-          if (updateTimeoutId === null) {
-            updateTimeoutId = setTimeout(() => this.update(), this.autoUpdateIntervalInMs)
-            console.log('next update scheduled in finally in ' + this.autoUpdateIntervalInMs / 1000 + ' seconds')
-          }
-        }
-      }
-
-      async fetchPlaying() {
-        if (!activeChannelTracker.activeChannel)
-          return Promise.reject(new Error('no channel active'))
-
-        console.log('fetching currently playing')
-        let url = "latest/api/graphql?operationName=Now&variables=%7B%22stationId%22:" + activeChannelTracker.activeChannel.id + ",%22previousTrackLimit%22:1%7D&extensions=%7B%22persistedQuery%22:%7B%22version%22:1,%22sha256Hash%22:%228a931c7d177ff69709a79f4c213bd2403f0c11836c560bc22da55628d8100df8%22%7D%7D"
-
-        // Add new random guid for each rq to prevent getting stale/cached results.
-        // Had cases where it responded with over 10 minutes old data, where Date.now() has way passed next_refresh.
-        // Retrying directly after the stale response also often failed to get fresher data.
-        // This issue seems to be on fip server side, could replicate with curl.
-        url += '&x=' + this.uuidv4()
-
-        if (isDevMode) {
-          url = "https://www.fip.fr/" + url
-        }
-
-        let response = await fetch(url, {
-          headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate',
-            'Pragma': 'no-cache'
-          }
-        })
-
-        let json = null
-        try {
-          json = await response.json()
-        }
-        catch (err) {
-          console.log('err converting response to json', err)
-        }
-        if (json) {
-          // don't use data if stale
-          if (this.isFipResponseStale(json)) {
-            console.log('detected stale response')
-            return null
-          }
-          return this.playingFromJson(json)
-        }
-        else {
-          return null
-        }
-      }
-
-    isFipResponseStale(json) {
-      if (json.data.now?.next_refresh) {
-        let nowInSeconds = Math.round(Date.now() / 1000)
-        let isStale = nowInSeconds >= json.data.now.next_refresh
-        if (isStale) {
-          console.log('IsFipResponseStale: true, next_refresh ' + json.data.now.next_refresh + ', now ' + nowInSeconds)
-        }
-        return isStale
+    onDOMContentLoaded() {
+      let theme = localStorage.getItem('theme')
+      if (!theme) {
+        theme = this.defaultTheme
       } else {
-        console.log('could not determine next_refresh, returning stale')
-        return true
+        console.log('using theme from localStorage: ' + theme)
+      }
+      this.applyTheme(theme)
+    }
+
+    toggleDarkMode() {
+      let theme = document.documentElement.getAttribute('data-theme')
+      if (theme === null)
+        theme = this.defaultTheme
+
+      if (theme === 'dark') {
+        theme = 'light'
+      } else {
+        theme = 'dark'
+      }
+      localStorage.setItem('theme', theme)
+
+      this.applyTheme(theme)
+    }
+
+    applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme)
+    }
+  }
+
+  class UI {
+    theme = new Theme()
+    channels = null
+    msg = ''
+    lastShownLyricsText = ''
+    playing = null
+    activeChannelTracker = null
+
+    constructor(channels, activeChannelTracker) {
+      this.channels = channels
+      this.activeChannelTracker = activeChannelTracker
+      activeChannelTracker.subscribe(c => this.onActiveChannelChanged(c))
+      document.addEventListener("DOMContentLoaded", e => { this.onDOMContentLoaded() })
+    }
+
+    onDOMContentLoaded() {
+      this.createChannelsLinks()
+
+      // set max width of outer container, so when the text (of author, title or lyrics) gets too long, it doesn't mess up the layout)
+      let s = document.querySelectorAll(".channelsMaxWidth")
+      let maxWidth = this.calcChannelsMenuWidth().toFixed(2) + 'px'
+      s.forEach(e => e.style.maxWidth = maxWidth);
+
+      // hide outline of buttons clicked with mouse
+      var btns = document.getElementsByTagName("button")
+      for (let i = 0; i < btns.length; i++) {
+        let btn = btns[i];
+        btn.addEventListener('mouseup', e => { btn.blur(); });
+      }
+
+      // handle initial active channel (for which there's no change event)
+      this.onActiveChannelChanged(activeChannelTracker.activeChannel)
+    }
+
+    focusActiveChannel() {
+      let activeChannelLink = document.querySelector('.channelsListElemActive a');
+      activeChannelLink.focus()
+      // blur() to hide visual focus helper
+      activeChannelLink.blur()
+    }
+
+    onPlayingChanged(playing) {
+      // remember playing so we can check if it's still the same 'playing' when lyrics arrive
+      this.playing = playing
+
+      if (!playing) {
+        this.setMsg("could not find what's playing")
+        return
+      }
+
+      this.setMsg('')
+      this.update(playing)
+    }
+
+    onLyricsFound(playing) {
+      console.log('found lyrics')
+      if (playing !== this.playing) {
+        console.log("### currently playing changed while lyrics was being fetched")
+        return
+      }
+
+      this.updateLyricsUi(this.playing)
+    }
+
+    setMsg(msg) {
+      this.msg = msg
+    }
+
+    createChannelsLinks() {
+      let channelsContainer = document.getElementById('channels')
+      channels.forEach(c => {
+        let template = document.getElementById('channelLinkTemplate')
+        let node = template.content.cloneNode(true)
+        let listElem = node.querySelector("div");
+        listElem.setAttribute('id', getChannelElemId(c.id))
+
+        let staleAccentColor = this.makeHslaCssStrFromHsla(c.colorAsHsl.h, c.colorAsHsl.s, c.colorAsHsl.l, 0.2)
+        listElem.style.setProperty('--elem-accent', staleAccentColor)
+        let accentColor = this.makeHslCssStrFromHslColor(c.colorAsHsl)
+        listElem.style.setProperty('--channel-hover-color', accentColor);
+
+        let link = listElem.getElementsByTagName('a')[0]
+        link.href = '#' + c.anchor
+        link.title = c.name
+        link.onclick = () => activeChannelTracker.setActiveChannel(c)
+        link.innerText = c.name
+
+        channelsContainer.appendChild(node)
+      })
+    }
+
+    calcChannelsMenuWidth() {
+      // sum up menu part widths to get whole menu width 
+      let channelsMenuWidth = 0.0
+      let channelsList = document.getElementById('channels')
+      for (let i = 0; i < channelsList.children.length; i++) {
+        channelsMenuWidth += channelsList.children[i].getBoundingClientRect().width
+      }
+      return channelsMenuWidth
+    }
+
+    update(playing) {
+      this.updateSongInfoUi(playing)
+      this.updateLyricsUi(playing)
+      this.updateMsgUi(this.msg)
+    }
+
+    updateMsgUi(msg) {
+      let msgElem = document.getElementById('msg')
+      if (msg != msgElem.innerText)
+        msgElem.innerText = msg
+    }
+
+    updateLyricsUi(playing) {
+      let lyricsUiText = this.determineLyricsUiText(playing)
+      if (lyricsUiText != this.lastShownLyricsText) {
+        this.lastShownLyricsText = lyricsUiText
+        this.updateLyricsTextInUi(lyricsUiText)
+      }
+
+      this.updateSourceLinkInUi(playing)
+    }
+
+    determineLyricsUiText(playing) {
+      if (!playing)
+        return ''
+
+      let lyrics = playing?.lyricsResult?.lyricsInfo?.lyrics
+      return lyrics ?? '-'
+    }
+
+    updateSourceLinkInUi(playing) {
+      let srcLink = document.getElementById('lyricsSourceLink')
+      if (playing?.lyricsResult?.lyricsInfo?.lyricsSourceLink) {
+        srcLink.style.display = 'block'
+        srcLink.href = playing.lyricsResult.lyricsInfo.lyricsSourceLink
+      }
+      else {
+        srcLink.style.display = 'none'
+        document.getElementById('lyricsSourceLink').href = ''
       }
     }
 
-    playingFromJson(json) {
-      try {
-        let songInfo = json.data.now.song
-        if (songInfo == null) {
-          console.log('songInfo null')
-        }
+    updateLyricsTextInUi(lyricsUiText) {
+      // attempt to use multiple columns 
+      const minNewlinesToUseColumns = 24
+      const newlineRegex = new RegExp('\r?\n', 'g')
+      const matches = Array.from(lyricsUiText.matchAll(newlineRegex))
 
-        let serverTime = json.data.now.server_time
-        let nextRefresh = json.data.now.next_refresh
+      let col1Elem = document.getElementById('lyrics-col1')
+      let col2Elem = document.getElementById('lyrics-col2')
 
-        let interpreters = null
-        let songTitle = null
+      if (matches && matches.length >= minNewlinesToUseColumns) {
+        let m = Math.floor(matches.length / 2)
+        let middleNewlineLength = matches[m][0].length
+        // added newline length because we need to include the newline in the first column (in case of flex wrap)
+        let middleTxtPos = matches[m].index + middleNewlineLength
+        let secondHalf = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
 
-        if (songInfo != null) {
-          interpreters = songInfo.interpreters ? songInfo.interpreters.join(', ') : null
-          songTitle = songInfo.title
-        } else {
-          console.log("response's songInfo is null")
-          // sometimes json.data.now.song is null. but the next song in the json is already playing -> use that
-          let nextTracks = json.data.nextTracks
-          if (nextTracks && nextTracks.length > 0) {
-            let nextTrackStartTime = nextTracks[0].start_time
-            // has next track started playing already
-            if (serverTime >= nextTrackStartTime) {
-              // only if song could reasonably still be playing
-              const MAX_SONG_LENGTH_SEC = 60 * 10
-              if (nextTrackStartTime  && serverTime > nextTrackStartTime + MAX_SONG_LENGTH_SEC) {
-                console.log("not using response's nextTracks because it's stale")
-                return null
-              }
-              console.log('using data from json nextTitles')
-              interpreters = nextTracks[0].title
-              songTitle = nextTracks[0].subtitle
-            }
+        // prefer to cut off at empty line (prettier because blocks stay together)
+        let emptyLineRegex = new RegExp('(\r?\n){2}')
+        let ma = secondHalf.match(emptyLineRegex)
+        if (ma && ma.index && ma.length > 0) {
+          let isNotTooFarNearTheEnd = ma.index < (secondHalf.length - (secondHalf.length * 0.6))
+          if (isNotTooFarNearTheEnd) {
+            // add to middle pos because we've search only in second half, but want the absolute pos
+            // add double newline length to first part in case the 2nd column is flex-wrapped onto the first. Then we have a newline there as if we had it in one column.
+            middleTxtPos = middleTxtPos + ma.index + ma[0].length
           }
         }
 
-        let p = new Playing(
-          interpreters,
-          songTitle)
+        let firstColTxt = lyricsUiText.substring(0, middleTxtPos)
+        let secondColTxt = lyricsUiText.substring(middleTxtPos, lyricsUiText.length)
 
-        p.serverTime = serverTime
-        p.nextRefresh = nextRefresh
-        return p
+        col1Elem.innerText = firstColTxt
+        col2Elem.innerText = secondColTxt
       }
-      catch (err) {
-        console.log('err getting currently playing', err)
+      else { // fallback: use only first column
+        col1Elem.innerText = lyricsUiText
+        col2Elem.innerText = ''
       }
-      return null; // not found
     }
 
-      // https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
-      uuidv4() {
-        return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
-          (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-        );
-      }
+    updateSongInfoUi(playing) {
+      let elem = document.getElementById('songInfo')
 
-    }
+      if (playing?.isValid) {
+        let { artist, song } = playing
 
-    class ActiveChannelTracker {
-      channels = null
-      activeChannel = null
-      onActiveChannelChangedObservers = []
+        elem.style.display = 'block';
 
-      constructor(channels) {
-        this.channels = channels
-        // activeChannel = channels[0]
-        window.addEventListener('load', () => this.onWindowLoad())
-      }
+        // get attribute already decodes stuff
+        let displayedArtist = decodeURIComponent(elem.getAttribute('data-songArtist'))
+        let displayedSong = decodeURIComponent(elem.getAttribute('data-songTitle'))
 
-      onWindowLoad() {
-        let c = this.getActiveChannelFromUrl()
-        if (!c)
-          c = this.channels[0] // default to main channel
-  
-        this.setActiveChannel(c)
-      }
+        let hasSongDataChanged = displayedArtist !== artist && displayedSong !== song
+        if (hasSongDataChanged) {
+          let escapedArtist = encodeURIComponent(artist)
+          let escapedSong = encodeURIComponent(song)
 
-      subscribe(o) {
-        this.onActiveChannelChangedObservers.push(o)
-      }
+          elem.setAttribute('data-songArtist', escapedArtist)
+          elem.setAttribute('data-songTitle', escapedSong)
 
-      getActiveChannelFromUrl() {
-        // anchor name comes after a hash, for example id 'rock' is extracted from this url www.url.com/foo#rock
-        let anchor = location.hash.substr(1)
-        if (anchor) {
-          let found = this.channels.find(c => c.anchor === anchor)
-          if (found)
-            return found
+          document.getElementById('songArtist').innerText = artist
+          document.getElementById('songTitle').innerText = song
+
+          let searchStr = 'artist:' + artist + ' track:' + song
+          let spotifyLink = 'https://play.spotify.com/search/' + encodeURIComponent(searchStr)
+          document.getElementById('spotifyLink').href = spotifyLink
         }
-        return null
+      }
+      else {
+        elem.style.display = 'none';
+        elem.removeAttribute('data-songArtist')
+        elem.removeAttribute('data-songTitle')
       }
 
-      setActiveChannel(c) {
-        if (activeChannel != null && activeChannel.id == c.id) return
-
-        let oldChannel = activeChannel
-        console.log('setActiveChannel: ' + c.id + ', ' + c.name)
-        this.activeChannel = c
-        this.onActiveChannelChangedObservers.forEach(o => o(c))
-      }
+      // only show spotify link if there is current song info
+      document.getElementById('spotifyLink').style.display = elem.style.display
     }
 
-    // consts, global data
-    var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
-    const baseListenUrl = 'https://icecast.radiofrance.fr/'
-    const channels =
-      [
-        { name: 'fip', anchor: 'fip', id: 7, listenUrl: baseListenUrl + 'fip-hifi.aac', colorAsHsl: { h: 328, s: 100, l: 44 } },
-        { name: 'rock', anchor: 'rock', id: 64, listenUrl: baseListenUrl + 'fiprock-hifi.aac', colorAsHsl: { h: 355, s: 94, l: 59 } },
-        { name: 'jazz', anchor: 'jazz', id: 65, listenUrl: baseListenUrl + 'fipjazz-hifi.aac', colorAsHsl: { h: 182, s: 76, l: 31 } },
-        { name: 'groove', anchor: 'groove', id: 66, listenUrl: baseListenUrl + 'fipgroove-hifi.aac', colorAsHsl: { h: 255, s: 80, l: 66 } },
-        { name: 'pop', anchor: 'pop', id: 78, listenUrl: baseListenUrl + 'fippop-hifi.aac', colorAsHsl: { h: 141, s: 60, l: 39 } },
-        { name: 'électro', anchor: 'electro', id: 74, listenUrl: baseListenUrl + 'fipelectro-hifi.aac', colorAsHsl: { h: 190, s: 100, l: 50 } },
-        { name: 'monde', anchor: 'monde', id: 69, listenUrl: baseListenUrl + 'fipworld-hifi.aac', colorAsHsl: { h: 35, s: 85, l: 58 } },
-        { name: 'reggae', anchor: 'reggae', id: 71, listenUrl: baseListenUrl + 'fipreggae-hifi.aac', colorAsHsl: { h: 114, s: 27, l: 36 } },
-        { name: 'nouveautés', anchor: 'nouveautes', id: 70, listenUrl: baseListenUrl + 'fipnouveautes-hifi.aac', colorAsHsl: { h: 217, s: 84, l: 57 } },
-      ]
+    // sets style for active channel elem 
+    onActiveChannelChanged(activeChannel) {
+      let channelsList = document.getElementById('channels')
 
-    // state
-    var activeChannel = null
-    var lyricsService = null
-    var updateTimeoutId = null
-    var isDevMode = determineIsDevMode()
+      // clear all selected
+      for (let i = 0; i < channelsList.children.length; i++) {
+        if (channelsList.children[i].classList.contains('channelsListElemActive'))
+          channelsList.children[i].classList.remove('channelsListElemActive')
+      }
 
-    // entry/init call
-    window.addEventListener('load', this.onWindowLoad)
+      // set active selected
+      let activeChannelElem = document.getElementById(getChannelElemId(activeChannel.id))
+      if (!activeChannelElem.classList.contains('channelsListElemActive'))
+        activeChannelElem.classList.add('channelsListElemActive')
 
-    let activeChannelTracker = new ActiveChannelTracker(channels)
-    activeChannelTracker.subscribe(c => {
-      updatePlayerSrcUrl(c)
-      playingTracker.update()
-    })
+      document.documentElement.style.setProperty('--active-channel-color', this.makeHslCssStrFromHslColor(activeChannel.colorAsHsl));
 
-    let ui = new UI(channels, activeChannelTracker)
-    let playingTracker = new PlayingTracker(activeChannelTracker)
+      // focus active channel menu item, so tab navigation start point is the selected menu item (when coming from URL)
+      this.focusActiveChannel()
+
+      // pass in null as playing obj, so text from previous channel is cleared
+      this.update(null)
+    }
+
+    makeHslaCssStrFromHsla(h, s, l, a) {
+      return 'hsl(' + h + ',' + s + '%,' + l + '%,' + a + ')'
+    }
+
+    makeHslCssStrFromHsl(h, s, l) {
+      return 'hsl(' + h + ',' + s + '%,' + l + '%)'
+    }
+
+    makeHslCssStrFromHslColor(c) {
+      return this.makeHslCssStrFromHsl(c.h, c.s, c.l)
+    }
+
+  }
+
+  // first (automatically) selected channel is not observed 
+  class ActiveChannelTracker {
+    channels = null
+    activeChannel = null
+    onActiveChannelChangedObservers = []
+
+    constructor(channels) {
+      this.channels = channels
+
+      let c = this.getActiveChannelFromUrl()
+      if (!c)
+        c = this.channels[0] // default to main channel
+      console.log("active channel from url " + c.id)
+      this.setActiveChannel(c, false)
+    }
+
+    subscribe(o) {
+      this.onActiveChannelChangedObservers.push(o)
+    }
+
+    getActiveChannelFromUrl() {
+      // anchor name comes after a hash, for example id 'rock' is extracted from this url www.url.com/foo#rock
+      let anchor = window.location.hash.substr(1)
+      if (anchor) {
+        let found = this.channels.find(c => c.anchor === anchor)
+        if (found)
+          return found
+      }
+      return null
+    }
+
+    setActiveChannel(c, noNotify) {
+      console.log('ActiveChannelTracker::setActiveChannel: ' + c?.id + ', ' + c?.name)
+      if (this.activeChannel != null && this.activeChannel.id == c.id) return
+
+      let oldChannel = this.activeChannel
+      this.activeChannel = c
+      this.onActiveChannelChangedObservers.forEach(o => o(c))
+    }
+  }
+
+  // consts, global data
+  var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
+  const baseListenUrl = 'https://icecast.radiofrance.fr/'
+  const channels =
+    [
+      { name: 'fip', anchor: 'fip', id: 7, listenUrl: baseListenUrl + 'fip-hifi.aac', colorAsHsl: { h: 328, s: 100, l: 44 } },
+      { name: 'rock', anchor: 'rock', id: 64, listenUrl: baseListenUrl + 'fiprock-hifi.aac', colorAsHsl: { h: 355, s: 94, l: 59 } },
+      { name: 'jazz', anchor: 'jazz', id: 65, listenUrl: baseListenUrl + 'fipjazz-hifi.aac', colorAsHsl: { h: 182, s: 76, l: 31 } },
+      { name: 'groove', anchor: 'groove', id: 66, listenUrl: baseListenUrl + 'fipgroove-hifi.aac', colorAsHsl: { h: 255, s: 80, l: 66 } },
+      { name: 'pop', anchor: 'pop', id: 78, listenUrl: baseListenUrl + 'fippop-hifi.aac', colorAsHsl: { h: 141, s: 60, l: 39 } },
+      { name: 'électro', anchor: 'electro', id: 74, listenUrl: baseListenUrl + 'fipelectro-hifi.aac', colorAsHsl: { h: 190, s: 100, l: 50 } },
+      { name: 'monde', anchor: 'monde', id: 69, listenUrl: baseListenUrl + 'fipworld-hifi.aac', colorAsHsl: { h: 35, s: 85, l: 58 } },
+      { name: 'reggae', anchor: 'reggae', id: 71, listenUrl: baseListenUrl + 'fipreggae-hifi.aac', colorAsHsl: { h: 114, s: 27, l: 36 } },
+      { name: 'nouveautés', anchor: 'nouveautes', id: 70, listenUrl: baseListenUrl + 'fipnouveautes-hifi.aac', colorAsHsl: { h: 217, s: 84, l: 57 } },
+    ]
+  var isDevMode = window.location.protocol === 'file:'
+
+  // main/init
+  let activeChannelTracker = new ActiveChannelTracker(channels)
+  let ui = new UI(channels, activeChannelTracker)
+  activeChannelTracker.subscribe(updatePlayerSrcUrl)
+  window.addEventListener('load', () => {
+    // setup LyricsService and FipPlayingSongTracker in window.onLoad handler because the script for those are loaded async
+    lyricsService =
+      isDevMode
+        ? new LyricsService("http://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect")
+        : new LyricsService()
+
+    let playingTracker = new FipPlayingSongTracker(activeChannelTracker?.activeChannel?.id)
+    // keep activeChannelTracker updated of current active channel
+    activeChannelTracker.subscribe(c => { playingTracker.activeChannelId = c.id })
+
     playingTracker.subscribePlayingChanged(playing => { ui.onPlayingChanged(playing) })
-    playingTracker.subscribePlayingChanged(async playing => {
-          if (!playing)
-            return
-
-          // fetch lyrics
-          console.log('query lyrics for ' + playing.artist + ', ' + playing.song)
-          playing.lyricsResult = await lyricsService.queryLyrics(playing.artist, playing.song)
-          if (playing?.lyricsResult?.success) {
-            ui.onLyricsFound(playing)
-          } else {
-            errorMsg = playing?.lyricsResult?.error ?? ''
-            console.log('could not find lyrics: ' + errorMsg)
-          }
-    })
-
-    // types
-    function Playing(artist, song) {
-      this.artist = artist;
-      this.song = song;
-      this.isValid = artist != null && artist != '' && song != null && song != '';
-      this.lyricsResult = null;
-      this.serverTime = null;
-      this.nextRefresh = null;
-    }
+    playingTracker.subscribePlayingChanged(async playing => { updateLyrics(playing) })
+    playingTracker.update()
+  })
 
     // functions
-    function onWindowLoad() {
-      if (isDevMode) {
-        lyricsService = new LyricsService("http://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect")
+    async function updateLyrics(playing) {
+      if (!playing)
+          return
+
+      console.log('query lyrics for ' + playing.artist + ', ' + playing.song)
+      // set lyrics into existing playing object!
+      playing.lyricsResult = await lyricsService.queryLyrics(playing.artist, playing.song)
+      if (playing?.lyricsResult?.success) {
+        ui.onLyricsFound(playing)
       } else {
-        lyricsService = new LyricsService()
+        errorMsg = playing?.lyricsResult?.error ?? ''
+        console.log('could not find lyrics: ' + errorMsg)
       }
     }
 
@@ -833,11 +620,8 @@
       let u = a + 'ilt' + 'o' + ':' + m
       window.location.href = u
     }
+</script>
 
-    function determineIsDevMode() {
-      return window.location.protocol === 'file:'
-    }
-  </script>
 </head>
 
 <body>
@@ -870,7 +654,7 @@
           </svg>
         </a>
 
-        <button title="toggle dark mode" onclick="toggleDarkMode();" class="iconBtn">
+        <button title="toggle dark mode" onclick="ui.theme.toggleDarkMode();" class="iconBtn">
           <svg viewBox="0 0 24 24">
             <path
               d="M0 12c0 6.627 5.373 12 12 12s12-5.373 12-12-5.373-12-12-12-12 5.373-12 12zm2 0c0-5.514 4.486-10 10-10v20c-5.514 0-10-4.486-10-10z" />

@@ -20,7 +20,7 @@ class LyricsService {
 
   constructor(lyricsApiUrl) {
     if (!lyricsApiUrl) {
-      var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
+      var protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
       lyricsApiUrl = protocol + '/cl'
     }
     this.lyricsApiUrl = lyricsApiUrl
