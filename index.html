@@ -233,7 +233,7 @@
 
     // state
     var msg = ''
-    var currentlyPlayingInfo = null
+    var playing = null
     var activeChannel = null
     var lyricsService = null
     var lastShownLyricsText = ''
@@ -245,7 +245,7 @@
     window.onload = onWindowLoad
 
     // types
-    function CurrentlyPlayingInfo(artist, song) {
+    function Playing(artist, song) {
       this.artist = artist;
       this.song = song;
       this.isValid = artist != null && artist != '' && song != null && song != '';
@@ -265,7 +265,7 @@
 
       // set max width of outer container, so when the text (of author, title or lyrics) gets too long, it doesn't mess up the layout)
       let s = document.querySelectorAll(".channelsMaxWidth")
-      let maxWidth = calculateChannelsMenuWidth().toFixed(2) + 'px'
+      let maxWidth = calcChannelsMenuWidth().toFixed(2) + 'px'
       s.forEach(e => e.style.maxWidth = maxWidth);
 
       // hide outline of buttons clicked with mouse
@@ -290,12 +290,12 @@
       setActiveChannel(c)
 
       // focus active channel menu item, so tab navigation start point is the selected menu item, blur() to hide visual focus helper
-      activeChannelMenuLink = document.querySelector('.channelsListElemActive a');
-      activeChannelMenuLink.focus()
-      activeChannelMenuLink.blur()
+      activeChannelLink = document.querySelector('.channelsListElemActive a');
+      activeChannelLink.focus()
+      activeChannelLink.blur()
     }
 
-    function calculateChannelsMenuWidth() {
+    function calcChannelsMenuWidth() {
       // sum up menu part widths to get whole menu width 
       let channelsMenuWidth = 0.0
       let channelsList = document.getElementById('channels')
@@ -412,26 +412,26 @@
         msg = ''
 
         // fetch song
-        let previousPlayingInfo = currentlyPlayingInfo
-        let freshCurrentlyPlayingInfo = await fetchCurrentlyPlaying()
+        let previousPlaying = playing
+        let freshPlaying = await fetchPlaying()
 
-        if (!freshCurrentlyPlayingInfo) {
-          currentlyPlayingInfo = null
+        if (!freshPlaying) {
+          playing = null
           msg = "could not find what's on"
           return
         }
 
-        if (!freshCurrentlyPlayingInfo.isValid) {
+        if (!freshPlaying.isValid) {
           console.log('currentlyPlaying is not valid')
           return
         }
 
         let nowInSecs = Math.round(Date.now() / 1000)
-        console.log('times: ' + JSON.stringify({ nowInSecs: nowInSecs, serverTime: freshCurrentlyPlayingInfo.serverTime, nextRefresh: freshCurrentlyPlayingInfo.nextRefresh }))
+        console.log('times: ' + JSON.stringify({ nowInSecs: nowInSecs, serverTime: freshPlaying.serverTime, nextRefresh: freshPlaying.nextRefresh }))
 
         // schedule next update
-        if (freshCurrentlyPlayingInfo.serverTime && freshCurrentlyPlayingInfo.nextRefresh) {
-          let numSecondsToNextRefresh = Math.max(freshCurrentlyPlayingInfo.nextRefresh - nowInSecs, 3)
+        if (freshPlaying.serverTime && freshPlaying.nextRefresh) {
+          let numSecondsToNextRefresh = Math.max(freshPlaying.nextRefresh - nowInSecs, 3)
           if (Number.isInteger(numSecondsToNextRefresh) && numSecondsToNextRefresh > 0) {
             updateTimeoutId = setTimeout(() => update(), numSecondsToNextRefresh * 1000)
             console.log('next update scheduled in ' + numSecondsToNextRefresh + ' seconds')
@@ -441,22 +441,22 @@
         }
 
         let hasSongChanged =
-          !previousPlayingInfo
-          || previousPlayingInfo.artist !== freshCurrentlyPlayingInfo.artist
-          || previousPlayingInfo.song !== freshCurrentlyPlayingInfo.song
+          !previousPlaying
+          || previousPlaying.artist !== freshPlaying.artist
+          || previousPlaying.song !== freshPlaying.song
 
         console.log('hasSongChanged ' + hasSongChanged)
         if (hasSongChanged) {
-          currentlyPlayingInfo = freshCurrentlyPlayingInfo
+          playing = freshPlaying
           updateUi() // update ui before async lyrics query
 
           // fetch lyrics
-          console.log('query lyrics for ' + freshCurrentlyPlayingInfo.artist + ', ' + freshCurrentlyPlayingInfo.song)
-          freshCurrentlyPlayingInfo.lyricsResult = await lyricsService.queryLyrics(freshCurrentlyPlayingInfo.artist, freshCurrentlyPlayingInfo.song)
-          if (freshCurrentlyPlayingInfo?.lyricsResult?.success) {
+          console.log('query lyrics for ' + freshPlaying.artist + ', ' + freshPlaying.song)
+          freshPlaying.lyricsResult = await lyricsService.queryLyrics(freshPlaying.artist, freshPlaying.song)
+          if (freshPlaying?.lyricsResult?.success) {
             console.log('found lyrics')
           } else {
-            errorMsg = freshCurrentlyPlayingInfo?.lyricsResult?.error ?? ''
+            errorMsg = freshPlaying?.lyricsResult?.error ?? ''
             console.log('could not find lyrics: ' + errorMsg)
           }
         } else {
@@ -476,7 +476,7 @@
       }
     };
 
-    async function fetchCurrentlyPlaying(retryAttemptNo) {
+    async function fetchPlaying(retryAttemptNo) {
       if (!activeChannel)
         return Promise.reject(new Error('no channel active'))
 
@@ -513,7 +513,7 @@
           console.log('detected stale response')
           return null
         }
-        return currentlyPlayingFromJson(json)
+        return playingFromJson(json)
       }
       else {
         return null
@@ -528,9 +528,8 @@
     }
 
     function isFipResponseStale(json) {
-      let nowInSeconds = Math.round(Date.now() / 1000)
-
       if (json.data.now?.next_refresh) {
+        let nowInSeconds = Math.round(Date.now() / 1000)
         let isStale = nowInSeconds >= json.data.now.next_refresh
         if (isStale) {
           console.log('IsFipResponseStale: true, next_refresh ' + json.data.now.next_refresh + ', now ' + nowInSeconds)
@@ -543,12 +542,12 @@
     }
 
     function updateUi() {
-      updateSongInfoUi(currentlyPlayingInfo)
-      updateLyricsUi(currentlyPlayingInfo, activeChannel)
+      updateSongInfoUi(playing)
+      updateLyricsUi(playing, activeChannel)
       updateMsgUi(msg)
     }
 
-    function currentlyPlayingFromJson(json) {
+    function playingFromJson(json) {
       try {
         let songInfo = json.data.now.song
         if (songInfo == null) {
@@ -585,13 +584,13 @@
           }
         }
 
-        let r = new CurrentlyPlayingInfo(
+        let p = new Playing(
           interpreters,
           songTitle)
 
-        r.serverTime = serverTime
-        r.nextRefresh = nextRefresh
-        return r
+        p.serverTime = serverTime
+        p.nextRefresh = nextRefresh
+        return p
       }
       catch (err) {
         console.log('err getting currently playing', err)
@@ -617,9 +616,9 @@
 
     function updateSourceLinkInUi() {
       let srcLink = document.getElementById('lyricsSourceLink')
-      if (currentlyPlayingInfo?.lyricsResult?.lyricsInfo?.lyricsSourceLink) {
+      if (playing?.lyricsResult?.lyricsInfo?.lyricsSourceLink) {
         srcLink.style.display = 'block'
-        srcLink.href = currentlyPlayingInfo.lyricsResult.lyricsInfo.lyricsSourceLink
+        srcLink.href = playing.lyricsResult.lyricsInfo.lyricsSourceLink
       }
       else {
         srcLink.style.display = 'none'
@@ -675,19 +674,19 @@
       return lyrics ?? '-'
     }
 
-    function updateSongInfoUi(currentlyPlayingInfo) {
+    function updateSongInfoUi(playing) {
       let elem = document.getElementById('songInfo')
 
-      if (currentlyPlayingInfo?.isValid) {
-        let { artist, song } = currentlyPlayingInfo
+      if (playing?.isValid) {
+        let { artist, song } = playing
 
         elem.style.display = 'block';
 
         // get attribute already decodes stuff
-        let currentlyDisplayedArtist = decodeURIComponent(elem.getAttribute('data-songArtist'))
-        let currentlyDisplayedSong = decodeURIComponent(elem.getAttribute('data-songTitle'))
+        let displayedArtist = decodeURIComponent(elem.getAttribute('data-songArtist'))
+        let displayedSong = decodeURIComponent(elem.getAttribute('data-songTitle'))
 
-        let hasSongDataChanged = currentlyDisplayedArtist !== artist && currentlyDisplayedSong !== song
+        let hasSongDataChanged = displayedArtist !== artist && displayedSong !== song
         if (hasSongDataChanged) {
           console.log('song data changed, updating')
           let escapedArtist = encodeURIComponent(artist)
