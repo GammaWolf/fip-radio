@@ -22,8 +22,18 @@ class FipPlayingSongTracker {
 
     set activeChannelId(activeChannelId) {
         this._activeChannelId = activeChannelId
-        this.setPlaying(null)
-        this.update()
+        let updatePromise = this.update()
+
+        // clear currently playing after a timeout, so we avoid displaying stale data, 
+        // but still have a smooth gap-free transition in the normal case where the update finishes quickly  
+        const timeoutMarker = 'TIMEOUT'
+        const timeoutMs = 500
+        let timeoutPromise = new Promise((resolve, _) => setTimeout(resolve, timeoutMs, timeoutMarker))
+        Promise.race([updatePromise, timeoutPromise])
+            .then(result => {
+                if (result === timeoutMarker)
+                    this.setPlaying(null)
+            })
       }
 
       get activeChannelId() {
@@ -92,6 +102,7 @@ class FipPlayingSongTracker {
             console.log('hasSongChanged ' + hasSongChanged)
             if (hasSongChanged) {
                 this.setPlaying(freshPlaying)
+                return freshPlaying
             }
         } finally {
             if (this.updateTimeoutId === null) {

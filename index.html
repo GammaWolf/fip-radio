@@ -96,11 +96,10 @@
         this.playing = playing
 
         if (!playing) {
-          this.setMsg("could not find what's playing")
+          this.update(playing)
           return
         }
 
-        this.setMsg('')
         this.update(playing)
       }
 
@@ -290,9 +289,6 @@
 
         // focus active channel menu item, so tab navigation start point is the selected menu item (when coming from URL)
         this.focusActiveChannel()
-
-        // clear now stale song info (null to clear)
-        this.update(null)
       }
 
       makeHslaCssStrFromHsla(h, s, l, a) {
