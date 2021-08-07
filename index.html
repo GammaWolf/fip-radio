@@ -291,7 +291,7 @@
         // focus active channel menu item, so tab navigation start point is the selected menu item (when coming from URL)
         this.focusActiveChannel()
 
-        // pass in null as playing obj, so text from previous channel is cleared
+        // clear now stale song info (null to clear)
         this.update(null)
       }
 
@@ -341,8 +341,9 @@
       }
 
       setActiveChannel(c, noNotify) {
-        console.log('ActiveChannelTracker::setActiveChannel: ' + c?.id + ', ' + c?.name)
         if (this.activeChannel != null && this.activeChannel.id == c.id) return
+
+        console.log('ActiveChannelTracker::setActiveChannel: ' + c?.id + ', ' + c?.name)
 
         let oldChannel = this.activeChannel
         this.activeChannel = c

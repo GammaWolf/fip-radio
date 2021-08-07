@@ -16,14 +16,13 @@ class FipPlayingSongTracker {
     observers = []
     _activeChannelId = null
 
-    memberReentrancyMarker = 0
-
     constructor(activeChannelId) {
         this._activeChannelId = activeChannelId
     }
 
     set activeChannelId(activeChannelId) {
         this._activeChannelId = activeChannelId
+        this.setPlaying(null)
         this.update()
       }
 
@@ -37,8 +36,7 @@ class FipPlayingSongTracker {
     
     async update() {
         try {
-            let localReentrancyMarker = this.memberReentrancyMarker + 1
-            this.memberReentrancyMarker = localReentrancyMarker
+            let localChannelIdAtStart = this.activeChannelId
 
             console.log("playingTracker::update() " + this.activeChannelId)
 
@@ -52,13 +50,13 @@ class FipPlayingSongTracker {
             }
 
             // fetch song
-            let previousPlaying = this.playing
             let freshPlaying = await this.fetchPlaying()
 
             // Reentrancy check, abort if update was called while previous update call (a)waited.
             // Checking local against member var: if another update was called, while we were waiting, it would have changed the member var
-            if (localReentrancyMarker !== this.memberReentrancyMarker) {
+            if (localChannelIdAtStart !== this.activeChannelId) {
                 console.log("reentrancy detected, aborting")
+                this.playing = null
                 return
             }
 
@@ -87,9 +85,9 @@ class FipPlayingSongTracker {
             }
 
             let hasSongChanged =
-                !previousPlaying
-                || previousPlaying.artist !== freshPlaying.artist
-                || previousPlaying.song !== freshPlaying.song
+                !this.playing
+                || this.playing.artist !== freshPlaying.artist
+                || this.playing.song !== freshPlaying.song
 
             console.log('hasSongChanged ' + hasSongChanged)
             if (hasSongChanged) {
